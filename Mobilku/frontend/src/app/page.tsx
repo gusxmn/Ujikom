@@ -1,10 +1,10 @@
 'use client'
 
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '@/lib/contexts/AuthContext'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Car, Shield, CreditCard, Truck } from 'lucide-react'
-import ProductCard from '@/components/products/ProductCard'
+import ProductCard from '@/lib/components/products/ProductCard'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import Link from 'next/link'
@@ -129,11 +129,25 @@ export default function HomePage() {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : products && products.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {products?.map((product: any) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  name={product.name}
+                  slug={product.slug}
+                  price={product.price}
+                  image={product.image}
+                  rating={product.rating}
+                  reviews={product.reviews}
+                  stock={product.stock}
+                />
               ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">Belum ada mobil tersedia</p>
             </div>
           )}
         </div>
@@ -144,7 +158,7 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold mb-8 text-center">Kategori Mobil</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-            {categories?.map((category: any) => (
+            {categories && categories.map((category: { id: string | number; name?: string; _count?: { products?: number } }) => (
               <Link
                 key={category.id}
                 href={`/products?category=${category.id}`}
@@ -177,7 +191,7 @@ export default function HomePage() {
             >
               Lihat Mobil Tersedia
             </Link>
-            {user.role === 'CUSTOMER' && (
+            {user && user.role === 'customer' && (
               <Link
                 href="/cart"
                 className="inline-block bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition"
