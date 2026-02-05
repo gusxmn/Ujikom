@@ -14,8 +14,15 @@ export default function HomePage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login')
+    if (!isLoading) {
+      // Redirect admin to dashboard
+      if (user && user.role === 'ADMIN') {
+        router.push('/admin')
+      }
+      // Redirect non-authenticated users to login
+      if (!user) {
+        router.push('/login')
+      }
     }
   }, [user, isLoading, router])
 

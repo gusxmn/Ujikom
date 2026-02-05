@@ -1,12 +1,12 @@
 'use client';
 
 import AdminLayout from '@/lib/components/layout/AdminLayout';
-import AdminOrders from '../Admin-orders';
+import AdminUsers from '../Admin-Users';
 
-export default function AdminOrdersPage() {
+export default function AdminUsersPage() {
   return (
     <AdminLayout>
-      <AdminOrders />
+      <AdminUsers />
     </AdminLayout>
   );
 }
