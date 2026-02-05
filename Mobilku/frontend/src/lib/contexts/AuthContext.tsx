@@ -9,7 +9,7 @@ interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'customer';
+  role: 'ADMIN' | 'CUSTOMER';
   avatar?: string;
   phone?: string;
   createdAt?: string;
@@ -53,10 +53,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     try {
       const response = await api.post('/auth/login', { email, password });
-      const { token, user: userData } = response.data;
+      const { access_token, token, user: userData } = response.data;
+      const finalToken = access_token || token;
       
-      localStorage.setItem('token', token);
-      api.defaults.headers.Authorization = `Bearer ${token}`;
+      localStorage.setItem('token', finalToken);
+      api.defaults.headers.Authorization = `Bearer ${finalToken}`;
+      
+      console.log('Login response:', response.data);
+      console.log('User data:', userData);
+      console.log('User role:', userData?.role);
+      
       setUser(userData);
       
       toast.success('Login successful!');
@@ -75,10 +81,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         password,
         name,
       });
-      const { token, user: userData } = response.data;
+      const { access_token, token, user: userData } = response.data;
+      const finalToken = access_token || token;
       
-      localStorage.setItem('token', token);
-      api.defaults.headers.Authorization = `Bearer ${token}`;
+      localStorage.setItem('token', finalToken);
+      api.defaults.headers.Authorization = `Bearer ${finalToken}`;
       setUser(userData);
       
       toast.success('Registration successful!');

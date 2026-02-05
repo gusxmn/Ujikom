@@ -48,7 +48,15 @@ export default function HomePage() {
     )
   }
 
-  if (!user) return null
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen">
@@ -191,7 +199,7 @@ export default function HomePage() {
             >
               Lihat Mobil Tersedia
             </Link>
-            {user && user.role === 'customer' && (
+            {user && user.role === 'CUSTOMER' && (
               <Link
                 href="/cart"
                 className="inline-block bg-transparent border-2 border-white text-white px-8 py-3 rounded-lg font-semibold hover:bg-white/10 transition"

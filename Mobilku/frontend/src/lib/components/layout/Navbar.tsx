@@ -2,12 +2,23 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { Car, LogOut, User, ShoppingCart } from 'lucide-react';
-import { useState } from 'react';
+import { Car, LogOut, User, ShoppingCart, Settings } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // Debug user and role
+  useEffect(() => {
+    console.log('Navbar: user changed', { user, role: user?.role });
+    if (user?.role === 'ADMIN') {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
+  }, [user]);
 
   return (
     <nav className="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
@@ -26,8 +37,9 @@ export default function Navbar() {
           <Link href="/products" className="text-gray-600 hover:text-gray-900 transition">
             Products
           </Link>
-          {user?.role === 'admin' && (
-            <Link href="/admin" className="text-gray-600 hover:text-gray-900 transition">
+          {isAdmin && (
+            <Link href="/admin" className="text-blue-600 font-semibold hover:text-blue-700 transition flex items-center gap-1">
+              <Settings className="w-4 h-4" />
               Admin
             </Link>
           )}
@@ -57,12 +69,28 @@ export default function Navbar() {
                     >
                       Profile
                     </Link>
-                    <Link
-                      href="/orders"
-                      className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                    >
-                      Orders
-                    </Link>
+                    {user.role === 'ADMIN' && (
+                      <>
+                        <Link
+                          href="/admin"
+                          className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        >
+                          Dashboard
+                        </Link>
+                        <Link
+                          href="/admin/products"
+                          className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        >
+                          Products
+                        </Link>
+                        <Link
+                          href="/admin/orders"
+                          className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        >
+                          Orders
+                        </Link>
+                      </>
+                    )}
                     <button
                       onClick={() => {
                         logout();

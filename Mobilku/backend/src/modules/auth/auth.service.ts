@@ -77,8 +77,16 @@ export class AuthService {
 
     const { password, ...result } = user;
     
+    const payload = { 
+      sub: user.id, 
+      email: user.email, 
+      role: user.role 
+    };
+    
+    const token = this.jwtService.sign(payload);
+    
     return {
-      message: 'Registration successful',
+      access_token: token,
       user: result,
     };
   }
@@ -113,8 +121,16 @@ export class AuthService {
 
     const { password, ...result } = user;
     
+    const payload = { 
+      sub: user.id, 
+      email: user.email, 
+      role: user.role 
+    };
+    
+    const token = this.jwtService.sign(payload);
+    
     return {
-      message: 'Admin registration successful',
+      access_token: token,
       user: result,
     };
   }

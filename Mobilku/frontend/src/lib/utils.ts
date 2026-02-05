@@ -15,6 +15,10 @@ export const formatDate = (date: Date | string): string => {
   });
 };
 
+export const formatNumber = (num: number): string => {
+  return new Intl.NumberFormat('id-ID').format(num);
+};
+
 export const truncateText = (text: string, length: number): string => {
   if (text.length <= length) return text;
   return text.substring(0, length) + '...';
