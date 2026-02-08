@@ -7,12 +7,18 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🚀 Seeding database...');
 
-  // Hapus data lama jika ada (untuk development)
-  await prisma.payment.deleteMany();
+  // Hapus data lama jika ada (untuk development) - dalam urutan yang benar untuk foreign keys
+  await prisma.cartItem.deleteMany();
+  await prisma.cart.deleteMany();
+  await prisma.review.deleteMany();
+  await prisma.wishlist.deleteMany();
   await prisma.orderItem.deleteMany();
+  await prisma.payment.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.shippingAddress.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
+  await prisma.coupon.deleteMany();
   await prisma.user.deleteMany();
 
   // Create admin user
