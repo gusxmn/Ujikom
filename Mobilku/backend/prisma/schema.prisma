@@ -48,6 +48,7 @@ model Product {
   id           Int       @id @default(autoincrement())
   name         String
   description  String?
+  sku          String?
   slug         String    @unique
   price        Decimal   @db.Decimal(15, 2)
   year         Int
@@ -56,6 +57,7 @@ model Product {
   mileage      Int
   color        String
   stock        Int       @default(0)
+  rating       Float     @default(0)
   images       Json
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())

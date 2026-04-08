@@ -49,7 +49,7 @@ export default function HomePage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-900">Loading...</p>
         </div>
       </div>
     )
@@ -59,7 +59,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Redirecting to login...</p>
+          <p className="text-gray-900">Redirecting to login...</p>
         </div>
       </div>
     )
@@ -93,29 +93,29 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Car className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Banyak Pilihan</h3>
-              <p className="text-gray-600">Ratusan mobil dari berbagai merek dan tipe</p>
+              <h3 className="text-xl font-semibold mb-2 text-black">Banyak Pilihan</h3>
+              <p className="text-gray-950">Ratusan mobil dari berbagai merek dan tipe</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-8 h-8 text-green-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Terjamin</h3>
-              <p className="text-gray-600">Garansi dan inspeksi menyeluruh</p>
+              <h3 className="text-xl font-semibold mb-2 text-black">Terjamin</h3>
+              <p className="text-gray-950">Garansi dan inspeksi menyeluruh</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <CreditCard className="w-8 h-8 text-purple-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Pembayaran Aman</h3>
-              <p className="text-gray-600">Berbagai metode pembayaran terpercaya</p>
+              <h3 className="text-xl font-semibold mb-2 text-black">Pembayaran Aman</h3>
+              <p className="text-gray-950">Berbagai metode pembayaran terpercaya</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Truck className="w-8 h-8 text-orange-600" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Pengiriman Cepat</h3>
-              <p className="text-gray-600">Gratis pengiriman ke seluruh Indonesia</p>
+              <h3 className="text-xl font-semibold mb-2 text-black">Pengiriman Cepat</h3>
+              <p className="text-gray-950">Gratis pengiriman ke seluruh Indonesia</p>
             </div>
           </div>
         </div>
@@ -125,7 +125,7 @@ export default function HomePage() {
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center mb-8">
-            <h2 className="text-3xl font-bold">Mobil Terpopuler</h2>
+            <h2 className="text-3xl font-bold text-black">Mobil Terpopuler</h2>
             <Link
               href="/products"
               className="text-blue-600 hover:text-blue-700 font-semibold"
@@ -162,7 +162,7 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-gray-500">Belum ada mobil tersedia</p>
+              <p className="text-gray-900">Belum ada mobil tersedia</p>
             </div>
           )}
         </div>
@@ -171,19 +171,19 @@ export default function HomePage() {
       {/* Categories */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold mb-8 text-center">Kategori Mobil</h2>
+          <h2 className="text-3xl font-bold mb-8 text-center text-black">Kategori Mobil</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             {categories && categories.map((category: { id: string | number; name?: string; _count?: { products?: number } }) => (
               <Link
                 key={category.id}
-                href={`/products?category=${category.id}`}
-                className="bg-gray-50 hover:bg-blue-50 border rounded-lg p-4 text-center transition group"
+                href={`/products?categoryId=${category.id}`}
+                className="border rounded-lg p-4 text-center transition group text-black hover:border-blue-400"
               >
                 <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-200">
                   <Car className="w-6 h-6 text-blue-600" />
                 </div>
-                <h3 className="font-semibold">{category.name}</h3>
-                <p className="text-sm text-gray-500">{category._count?.products || 0} mobil</p>
+                <h3 className="font-semibold text-black">{category.name}</h3>
+                <p className="text-sm text-gray-950">{category._count?.products || 0} mobil</p>
               </Link>
             ))}
           </div>

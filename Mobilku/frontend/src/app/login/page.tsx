@@ -2,24 +2,16 @@
 
 import { useEffect } from 'react';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/lib/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/lib/components/ui/Card';
 import { LogIn, User, ArrowRight } from 'lucide-react';
+import GuestLayout from '@/lib/components/layout/GuestLayout';
 
 export default function LoginPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (user) {
-      router.push('/');
-    }
-  }, [user, router]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
+    <GuestLayout>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
       <div className="w-full max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12">
@@ -77,5 +69,6 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+    </GuestLayout>
   );
 }

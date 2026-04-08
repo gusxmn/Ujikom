@@ -139,14 +139,6 @@ export default function ProfilePage() {
                         <p className="font-semibold text-gray-900">{user.phone || 'Belum diatur'}</p>
                       </div>
                     </div>
-
-                    <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
-                      <User className="w-5 h-5 text-gray-400" />
-                      <div>
-                        <p className="text-sm text-gray-600">Role</p>
-                        <p className="font-semibold text-gray-900 capitalize">{user.role}</p>
-                      </div>
-                    </div>
                   </>
                 )}
               </CardContent>

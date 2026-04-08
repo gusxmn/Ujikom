@@ -1,7 +1,9 @@
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Star, ShoppingCart, Heart } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
+import { api } from '@/lib/api';
 
 interface ProductCardProps {
   id: string;
@@ -24,6 +26,7 @@ export default function ProductCard({
   reviews = 0,
   stock = 0,
 }: ProductCardProps) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAddToCart = async () => {
@@ -40,10 +43,14 @@ export default function ProductCard({
 
   const handleAddToWishlist = async () => {
     try {
-      // Add to wishlist logic here
+      // Add to wishlist via API
+      await api.post('/wishlist/add', { productId: parseInt(id, 10) });
       toast.success('Added to wishlist!');
-    } catch (error) {
-      toast.error('Failed to add to wishlist');
+      // Navigate to wishlist page after adding
+      router.push('/wishlist');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Failed to add to wishlist';
+      toast.error(errorMessage);
     }
   };
 

@@ -5,6 +5,8 @@ interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
+  closeOnBackdropClick?: boolean;
+  closeOnEscape?: boolean;
 }
 
 interface DialogContentProps {
@@ -32,16 +34,57 @@ interface DialogFooterProps {
   className?: string;
 }
 
-export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) => {
+export const Dialog: React.FC<DialogProps> = ({ 
+  open, 
+  onOpenChange, 
+  children,
+  closeOnBackdropClick = true,
+  closeOnEscape = true 
+}) => {
+  React.useEffect(() => {
+    if (open) {
+      // Disable scroll on body
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+    } else {
+      // Re-enable scroll on body
+      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+      document.documentElement.style.overflow = 'unset';
+    };
+  }, [open]);
+
+  const handleBackdropClick = () => {
+    if (closeOnBackdropClick) {
+      onOpenChange(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' && closeOnEscape && open) {
+      onOpenChange(false);
+    }
+  };
+
   return (
     <>
       {open && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => onOpenChange(false)}
+          className="fixed inset-0 z-40 cursor-default"
+          style={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.25)',
+            pointerEvents: 'auto'
+          }}
+          onClick={handleBackdropClick}
+          onKeyDown={handleKeyDown}
+          role="presentation"
         />
       )}
-      <DialogContext.Provider value={{ open, onOpenChange }}>
+      <DialogContext.Provider value={{ open, onOpenChange, closeOnBackdropClick, closeOnEscape }}>
         {children}
       </DialogContext.Provider>
     </>
@@ -51,27 +94,39 @@ export const Dialog: React.FC<DialogProps> = ({ open, onOpenChange, children }) 
 const DialogContext = React.createContext<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  closeOnBackdropClick?: boolean;
+  closeOnEscape?: boolean;
 }>({
   open: false,
   onOpenChange: () => {},
+  closeOnBackdropClick: true,
+  closeOnEscape: true,
 });
 
 export const DialogContent: React.FC<DialogContentProps> = ({ children, className = '' }) => {
-  const { open, onOpenChange } = React.useContext(DialogContext);
+  const { open, onOpenChange, closeOnBackdropClick = true } = React.useContext(DialogContext);
 
   if (!open) return null;
+
+  const handleCloseClick = () => {
+    if (closeOnBackdropClick) {
+      onOpenChange(false);
+    }
+  };
 
   return (
     <div
       className={`fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-lg z-50 w-full max-w-md p-6 ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
-      <button
-        onClick={() => onOpenChange(false)}
-        className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
-      >
-        <X size={20} />
-      </button>
+      {closeOnBackdropClick && (
+        <button
+          onClick={handleCloseClick}
+          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
+        >
+          <X size={20} />
+        </button>
+      )}
       {children}
     </div>
   );

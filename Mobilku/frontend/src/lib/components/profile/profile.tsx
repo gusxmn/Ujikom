@@ -554,11 +554,11 @@ function OrderCard({ order }: { order: any }) {
                 </span>
               </div>
             </div>
-            <Link href={`/orders/${order.id}`}>
-              <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/orders/${order.id}`}>
                 Details
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
@@ -639,11 +639,11 @@ function WishlistItemCard({ item }: { item: any }) {
           
           {/* Actions */}
           <div className="flex gap-2">
-            <Link href={`/products/${product.slug}`} className="flex-1">
-              <Button variant="outline" size="sm" className="w-full">
+            <Button variant="outline" size="sm" className="flex-1" asChild>
+              <Link href={`/products/${product.slug}`}>
                 View
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <Button variant="primary" size="sm" className="flex-1">
               Add to Cart
             </Button>

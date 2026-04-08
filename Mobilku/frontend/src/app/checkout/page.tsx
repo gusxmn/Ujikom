@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -48,15 +48,22 @@ export default function CheckoutPage() {
   const [selectedShipping, setSelectedShipping] = useState('standard');
   const [selectedPayment, setSelectedPayment] = useState('credit_card');
   const [orderNotes, setOrderNotes] = useState('');
+  const [cartData, setCartData] = useState<any>(null);
 
-  // Fetch cart
-  const { data: cart } = useQuery({
-    queryKey: ['cart'],
-    queryFn: async () => {
-      const response = await api.get('/cart');
-      return response.data;
-    },
-  });
+  // Load cart from localStorage
+  useEffect(() => {
+    const cart = localStorage.getItem('cart');
+    if (cart) {
+      try {
+        setCartData(JSON.parse(cart));
+      } catch (error) {
+        console.error('Failed to parse cart:', error);
+        setCartData([]);
+      }
+    } else {
+      setCartData([]);
+    }
+  }, []);
 
   // Fetch user addresses
   const { data: addresses } = useQuery({
@@ -68,7 +75,7 @@ export default function CheckoutPage() {
   });
 
   const shippingCost = SHIPPING_METHODS.find(m => m.id === selectedShipping)?.price || 0;
-  const subtotal = cart?.items?.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0) || 0;
+  const subtotal = cartData?.reduce((sum: number, item: any) => sum + (item.price * item.quantity), 0) || 0;
   const total = subtotal + shippingCost;
 
   const handleNextStep = () => {
@@ -338,15 +345,19 @@ export default function CheckoutPage() {
               <CardContent className="space-y-4">
                 {/* Items */}
                 <div className="space-y-3 pb-4 border-b">
-                  {cart?.items?.map((item: any) => (
-                    <div key={item.id} className="flex justify-between text-sm">
-                      <div>
-                        <p className="font-medium text-gray-900">{item.name}</p>
-                        <p className="text-gray-600">Qty: {item.quantity}</p>
+                  {cartData && cartData.length > 0 ? (
+                    cartData.map((item: any, index: number) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <div>
+                          <p className="font-medium text-gray-900">Product #{item.productId}</p>
+                          <p className="text-gray-600">Qty: {item.quantity}</p>
+                        </div>
+                        <p className="font-medium">{formatPrice(item.price * item.quantity)}</p>
                       </div>
-                      <p className="font-medium">{formatPrice(item.price * item.quantity)}</p>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p className="text-gray-600">No items in cart</p>
+                  )}
                 </div>
 
                 {/* Pricing */}

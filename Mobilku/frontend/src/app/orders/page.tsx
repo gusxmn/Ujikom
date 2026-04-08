@@ -202,11 +202,16 @@ export default function OrderHistoryPage() {
 
                     {/* Actions */}
                     <div className="flex gap-2 flex-wrap">
-                      <Link href={`/orders/${order.id}`}>
-                        <Button variant="outline" size="sm" className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="flex items-center gap-2"
+                        asChild
+                      >
+                        <Link href={`/orders/${order.id}`}>
                           <Eye size={16} /> View Details
-                        </Button>
-                      </Link>
+                        </Link>
+                      </Button>
 
                       <Button
                         variant="outline"

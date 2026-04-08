@@ -19,7 +19,7 @@ import {
   ApiQuery 
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto, UpdateUserStatusDto, UpdatePasswordDto } from './dto';
+import { CreateUserDto, UpdateUserDto, UpdateUserStatusDto, UpdateUserRoleDto, UpdatePasswordDto } from './dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -126,6 +126,24 @@ export class UsersController {
     @Body() updateUserStatusDto: UpdateUserStatusDto,
   ) {
     return this.usersService.updateStatus(id, updateUserStatusDto, req.user.sub, req.user.role);
+  }
+
+  @Patch(':id/role')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update user role (Admin only)' })
+  @ApiResponse({ status: 200, description: 'User role updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input or cannot change own role' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - Admin only' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateRole(
+    @Request() req,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateUserRoleDto: UpdateUserRoleDto,
+  ) {
+    return this.usersService.update(id, { role: updateUserRoleDto.role }, req.user.sub, req.user.role);
   }
 
   @Patch(':id/password')

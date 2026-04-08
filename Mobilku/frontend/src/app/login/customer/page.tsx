@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/lib/components/ui/Button';
 import { Input } from '@/lib/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/lib/components/ui/Card';
 import { LogIn, Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import GuestLayout from '@/lib/components/layout/GuestLayout';
 
 export default function CustomerLoginPage() {
   const [email, setEmail] = useState('');
@@ -16,7 +16,6 @@ export default function CustomerLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +23,7 @@ export default function CustomerLoginPage() {
 
     try {
       await login(email, password);
-      router.push('/');
+      // Don't redirect here - login() already handles role-based redirect
     } catch (error) {
       // Error sudah ditangani di AuthContext
     } finally {
@@ -32,21 +31,9 @@ export default function CustomerLoginPage() {
     }
   };
 
-  const demoAccounts = [
-    {
-      email: 'customer@example.com',
-      password: 'Customer123!',
-      description: 'Regular customer account'
-    },
-    {
-      email: 'jane@example.com',
-      password: 'Jane123!',
-      description: 'Another test customer'
-    },
-  ];
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100 p-4">
+    <GuestLayout>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100 p-4">
       <div className="w-full max-w-md">
         {/* Back Button */}
         <Link
@@ -148,66 +135,10 @@ export default function CustomerLoginPage() {
                 </p>
               </div>
             </form>
-
-            {/* Demo Accounts */}
-            <div className="mt-6 pt-6 border-t">
-              <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                Demo Customer Accounts
-              </h4>
-              <div className="space-y-3">
-                {demoAccounts.map((account, index) => (
-                  <div
-                    key={index}
-                    className="border rounded-lg p-3 hover:border-blue-300 transition cursor-pointer bg-gray-50 group"
-                    onClick={() => {
-                      setEmail(account.email);
-                      setPassword(account.password);
-                    }}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <p className="text-xs text-gray-500">{account.description}</p>
-                      </div>
-                    </div>
-                    <div className="text-xs space-y-2">
-                      <div>
-                        <span className="text-gray-500">Email:</span>
-                        <div className="font-mono text-gray-700 bg-white p-2 rounded mt-1 border">
-                          {account.email}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Password:</span>
-                        <div className="font-mono text-gray-700 bg-white p-2 rounded mt-1 border">
-                          {account.password}
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEmail(account.email);
-                        setPassword(account.password);
-                      }}
-                      className="w-full mt-3 px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded text-xs font-medium transition"
-                    >
-                      Use Demo Account
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Help */}
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs text-blue-900">
-                ℹ️ Browse products, manage your orders, and track shipments. For admin access, use the Admin Login.
-              </p>
-            </div>
           </CardContent>
         </Card>
       </div>
     </div>
+    </GuestLayout>
   );
 }

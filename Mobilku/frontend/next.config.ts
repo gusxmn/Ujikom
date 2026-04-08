@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname, './'),
   },
+  reactStrictMode: false, // Disable strict mode to suppress hydration warnings in dev
 };
 
 export default nextConfig;

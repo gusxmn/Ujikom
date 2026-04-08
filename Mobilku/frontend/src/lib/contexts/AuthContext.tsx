@@ -52,25 +52,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, password: string) => {
     try {
+      console.log('🔐 Attempting login with:', { email });
+      console.log('🔐 API base URL:', api.defaults.baseURL);
+      
       const response = await api.post('/auth/login', { email, password });
       const { access_token, token, user: userData } = response.data;
       const finalToken = access_token || token;
       
-      localStorage.setItem('token', finalToken);
-      api.defaults.headers.Authorization = `Bearer ${finalToken}`;
-      
+      console.log('✅ Login successful!');
       console.log('Login response:', response.data);
       console.log('User data:', userData);
       console.log('User role:', userData?.role);
       
+      localStorage.setItem('token', finalToken);
+      api.defaults.headers.Authorization = `Bearer ${finalToken}`;
+      
+      // Update state first
       setUser(userData);
       
       toast.success('Login successful!');
-      router.push('/');
+      
+      // Redirect after state update with a small delay
+      setTimeout(() => {
+        if (userData?.role === 'ADMIN') {
+          console.log('🔐 Redirecting to admin...');
+          router.push('/admin');
+        } else {
+          console.log('🔐 Redirecting to home...');
+          router.push('/');
+        }
+      }, 100);
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Login failed';
+      console.warn('❌ Login failed!');
+      console.warn('Error message:', error.message);
+      
+      const message = error.response?.data?.message || error.message || 'Login failed';
       toast.error(message);
-      throw error;
     }
   };
 

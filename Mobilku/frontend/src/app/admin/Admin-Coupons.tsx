@@ -1,10 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { Button } from '@/lib/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/Card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/lib/components/ui/Dialog';
 import {
   Ticket,
   Search,
@@ -13,6 +22,7 @@ import {
   CheckCircle,
   XCircle,
   Plus,
+  Loader2,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -20,13 +30,13 @@ import toast from 'react-hot-toast';
 interface CouponData {
   id: number;
   code: string;
-  description: string;
-  discountType: 'PERCENTAGE' | 'FIXED';
-  discountValue: number;
-  maxUses: number;
-  usedCount: number;
-  minPurchaseAmount: number;
-  expiryDate: string;
+  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  value: number;
+  minPurchase: number;
+  maxDiscount?: number;
+  usageLimit?: number;
+  startDate: string;
+  endDate: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -35,38 +45,71 @@ interface CouponData {
 export default function AdminCoupons() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
-  const [editingCoupon, setEditingCoupon] = useState<CouponData | null>(null);
-  const [editForm, setEditForm] = useState({
-    code: '',
-    description: '',
-    discountType: 'PERCENTAGE' as 'PERCENTAGE' | 'FIXED',
-    discountValue: 0,
-    maxUses: 0,
-    minPurchaseAmount: 0,
-    expiryDate: '',
-  });
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [couponToDelete, setCouponToDelete] = useState<number | null>(null);
+  const [coupons, setCoupons] = useState<CouponData[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Fetch coupons
-  const { data: coupons, isLoading, error, refetch } = useQuery({
+  const { refetch } = useQuery({
     queryKey: ['admin-coupons', searchTerm, filterActive],
     queryFn: async () => {
       try {
+        setIsLoading(true);
+        setCurrentPage(1);
         const response = await api.get('/coupons', {
           params: {
             page: 1,
-            limit: 100,
+            limit: 20, // Reduced from 100 to 20
             active: filterActive !== 'all' ? filterActive === 'active' : undefined,
           },
         });
-        console.log('Coupons response:', response.data);
-        return response.data?.data || [];
+        const data = response.data?.data || [];
+        const meta = response.data?.meta;
+        setCoupons(data);
+        setTotalPages(meta?.totalPages || 0);
+        setHasMore(1 < (meta?.totalPages || 0));
+        return data;
       } catch (err) {
         console.error('Error fetching coupons:', err);
+        setCoupons([]);
+        setTotalPages(0);
+        setHasMore(false);
         throw err;
+      } finally {
+        setIsLoading(false);
       }
     },
   });
+
+  // Load more coupons
+  const handleLoadMore = async () => {
+    try {
+      setIsLoadingMore(true);
+      const nextPage = currentPage + 1;
+      const response = await api.get('/coupons', {
+        params: {
+          page: nextPage,
+          limit: 20,
+          active: filterActive !== 'all' ? filterActive === 'active' : undefined,
+        },
+      });
+      const newData = response.data?.data || [];
+      const meta = response.data?.meta;
+      setCoupons(prev => [...prev, ...newData]);
+      setCurrentPage(nextPage);
+      setHasMore(nextPage < (meta?.totalPages || 0));
+    } catch (error) {
+      console.error('Error loading more coupons:', error);
+      toast.error('Failed to load more coupons');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Delete coupon mutation
   const deleteCouponMutation = useMutation({
@@ -76,94 +119,17 @@ export default function AdminCoupons() {
     onSuccess: () => {
       toast.success('Coupon deleted successfully');
       refetch();
-    },
-    onError: () => {
-      toast.error('Failed to delete coupon');
-    },
-  });
-
-  // Update coupon mutation
-  const updateCouponMutation = useMutation({
-    mutationFn: async ({
-      couponId,
-      data,
-    }: {
-      couponId: number;
-      data: typeof editForm;
-    }) => {
-      await api.patch(`/coupons/${couponId}`, data);
-    },
-    onSuccess: () => {
-      toast.success('Coupon updated successfully');
-      setEditingCoupon(null);
-      refetch();
+      setDeleteDialogOpen(false);
+      setCouponToDelete(null);
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to update coupon');
-    },
-  });
-
-  // Create coupon mutation
-  const createCouponMutation = useMutation({
-    mutationFn: async (data: typeof editForm) => {
-      await api.post('/coupons', data);
-    },
-    onSuccess: () => {
-      toast.success('Coupon created successfully');
-      setShowCreateForm(false);
-      setEditForm({
-        code: '',
-        description: '',
-        discountType: 'PERCENTAGE',
-        discountValue: 0,
-        maxUses: 0,
-        minPurchaseAmount: 0,
-        expiryDate: '',
-      });
-      refetch();
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to create coupon');
+      toast.error(error.response?.data?.message || 'Failed to delete coupon');
     },
   });
 
   const handleDeleteCoupon = (couponId: number) => {
-    if (window.confirm('Are you sure you want to delete this coupon?')) {
-      deleteCouponMutation.mutate(couponId);
-    }
-  };
-
-  const handleEditCoupon = (coupon: CouponData) => {
-    setEditingCoupon(coupon);
-    setEditForm({
-      code: coupon.code,
-      description: coupon.description,
-      discountType: coupon.discountType,
-      discountValue: coupon.discountValue,
-      maxUses: coupon.maxUses,
-      minPurchaseAmount: coupon.minPurchaseAmount,
-      expiryDate: coupon.expiryDate,
-    });
-  };
-
-  const handleSaveEdit = () => {
-    if (!editingCoupon) return;
-    if (!editForm.code || !editForm.description) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-    updateCouponMutation.mutate({
-      couponId: editingCoupon.id,
-      data: editForm,
-    });
-  };
-
-  const handleCreateCoupon = () => {
-    if (!editForm.code || !editForm.description) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-    createCouponMutation.mutate(editForm);
+    setCouponToDelete(couponId);
+    setDeleteDialogOpen(true);
   };
 
   const filteredCoupons = (coupons || []).filter((coupon: CouponData) => {
@@ -175,22 +141,15 @@ export default function AdminCoupons() {
 
   if (isLoading) {
     return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-8 bg-gray-300 rounded w-1/4"></div>
-        <div className="space-y-3">
-          {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-16 bg-gray-300 rounded"></div>
-          ))}
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-300 rounded w-1/4"></div>
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="h-16 bg-gray-300 rounded"></div>
+            ))}
+          </div>
         </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-        <p className="font-bold">Error loading coupons</p>
-        <p className="text-sm">{error?.message || 'An error occurred'}</p>
       </div>
     );
   }
@@ -208,13 +167,12 @@ export default function AdminCoupons() {
             Total: {filteredCoupons.length} coupon{filteredCoupons.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button
-          onClick={() => setShowCreateForm(true)}
-          className="flex items-center gap-2 bg-black text-white hover:bg-gray-800"
-        >
-          <Plus size={18} />
-          Create Coupon
-        </Button>
+        <Link href="/admin/coupons/new">
+          <Button className="flex items-center gap-2 bg-black text-white hover:bg-gray-800">
+            <Plus size={18} />
+            Create Coupon
+          </Button>
+        </Link>
       </div>
 
       {/* Filters */}
@@ -260,10 +218,14 @@ export default function AdminCoupons() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-black text-lg">{coupon.code}</h3>
-                        <p className="text-sm text-gray-600">{coupon.description}</p>
                         <p className="text-sm text-gray-600 mt-1">
-                          Discount: {coupon.discountType === 'PERCENTAGE' ? `${coupon.discountValue}%` : `$${coupon.discountValue}`} | Used: {coupon.usedCount}/{coupon.maxUses}
+                          Discount: {coupon.discountType === 'PERCENTAGE' ? `${coupon.value}%` : `IDR ${coupon.value.toLocaleString('id-ID')}`}
                         </p>
+                        {coupon.usageLimit && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            Usage Limit: {coupon.usageLimit}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -290,13 +252,14 @@ export default function AdminCoupons() {
                     </span>
 
                     {/* Actions */}
-                    <button
-                      onClick={() => handleEditCoupon(coupon)}
-                      className="p-2 rounded-lg hover:bg-blue-100 transition"
-                      title="Edit coupon"
-                    >
-                      <Edit2 size={18} className="text-blue-600" />
-                    </button>
+                    <Link href={`/admin/coupons/${coupon.id}/edit`}>
+                      <button
+                        className="p-2 rounded-lg hover:bg-blue-100 transition"
+                        title="Edit coupon"
+                      >
+                        <Edit2 size={18} className="text-blue-600" />
+                      </button>
+                    </Link>
                     <button
                       onClick={() => handleDeleteCoupon(coupon.id)}
                       className="p-2 rounded-lg hover:bg-red-100 transition"
@@ -309,13 +272,34 @@ export default function AdminCoupons() {
 
                 {/* Metadata */}
                 <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500 flex justify-between flex-wrap gap-2">
-                  <span>Min Purchase: ${coupon.minPurchaseAmount}</span>
-                  <span>Expires: {formatDate(coupon.expiryDate)}</span>
+                  <span>Min Purchase: IDR {coupon.minPurchase?.toLocaleString('id-ID') || '0'}</span>
+                  <span>Valid: {formatDate(coupon.startDate)} - {formatDate(coupon.endDate)}</span>
                   <span>Created: {formatDate(coupon.createdAt)}</span>
                 </div>
               </CardContent>
             </Card>
           ))}
+
+          {/* Load More Button */}
+          {hasMore && (
+            <div className="text-center py-6">
+              <Button
+                variant="outline"
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                className="gap-2"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading more...
+                  </>
+                ) : (
+                  `Load More (Page ${currentPage + 1} of ${totalPages})`
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       ) : (
         <Card>
@@ -327,130 +311,38 @@ export default function AdminCoupons() {
         </Card>
       )}
 
-      {/* Create/Edit Modal */}
-      {(editingCoupon || showCreateForm) && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle className="text-black">
-                {editingCoupon ? 'Edit Coupon' : 'Create Coupon'}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">
-                  Code *
-                </label>
-                <input
-                  type="text"
-                  value={editForm.code}
-                  onChange={e => setEditForm({ ...editForm, code: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">
-                  Description *
-                </label>
-                <input
-                  type="text"
-                  value={editForm.description}
-                  onChange={e => setEditForm({ ...editForm, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-black mb-1">
-                    Discount Type
-                  </label>
-                  <select
-                    value={editForm.discountType}
-                    onChange={e => setEditForm({ ...editForm, discountType: e.target.value as 'PERCENTAGE' | 'FIXED' })}
-                    className="w-full px-3 py-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black bg-white"
-                  >
-                    <option value="PERCENTAGE">Percentage</option>
-                    <option value="FIXED">Fixed</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-black mb-1">
-                    Discount Value
-                  </label>
-                  <input
-                    type="number"
-                    value={editForm.discountValue}
-                    onChange={e => setEditForm({ ...editForm, discountValue: parseFloat(e.target.value) })}
-                    className="w-full px-3 py-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">
-                  Max Uses
-                </label>
-                <input
-                  type="number"
-                  value={editForm.maxUses}
-                  onChange={e => setEditForm({ ...editForm, maxUses: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">
-                  Min Purchase Amount
-                </label>
-                <input
-                  type="number"
-                  value={editForm.minPurchaseAmount}
-                  onChange={e => setEditForm({ ...editForm, minPurchaseAmount: parseFloat(e.target.value) })}
-                  className="w-full px-3 py-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-black mb-1">
-                  Expiry Date
-                </label>
-                <input
-                  type="datetime-local"
-                  value={editForm.expiryDate}
-                  onChange={e => setEditForm({ ...editForm, expiryDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-black"
-                />
-              </div>
-              <div className="flex gap-2 pt-4">
-                <button
-                  onClick={editingCoupon ? handleSaveEdit : handleCreateCoupon}
-                  disabled={editingCoupon ? updateCouponMutation.isPending : createCouponMutation.isPending}
-                  className="flex-1 bg-black text-white px-4 py-2 rounded-lg hover:bg-gray-800 disabled:opacity-50 transition"
-                >
-                  {editingCoupon
-                    ? updateCouponMutation.isPending ? 'Saving...' : 'Save'
-                    : createCouponMutation.isPending ? 'Creating...' : 'Create'}
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingCoupon(null);
-                    setShowCreateForm(false);
-                    setEditForm({
-                      code: '',
-                      description: '',
-                      discountType: 'PERCENTAGE',
-                      discountValue: 0,
-                      maxUses: 0,
-                      minPurchaseAmount: 0,
-                      expiryDate: '',
-                    });
-                  }}
-                  className="flex-1 bg-gray-300 text-black px-4 py-2 rounded-lg hover:bg-gray-400 transition"
-                >
-                  Cancel
-                </button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      {/* Delete Confirmation Dialog */}
+      <Dialog 
+        open={deleteDialogOpen} 
+        onOpenChange={setDeleteDialogOpen}
+        closeOnBackdropClick={!deleteCouponMutation.isPending}
+        closeOnEscape={!deleteCouponMutation.isPending}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Coupon</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this coupon? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={deleteCouponMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => couponToDelete && deleteCouponMutation.mutate(couponToDelete)}
+              disabled={deleteCouponMutation.isPending}
+            >
+              {deleteCouponMutation.isPending ? 'Deleting...' : 'Delete Coupon'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

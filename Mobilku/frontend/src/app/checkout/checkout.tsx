@@ -41,6 +41,16 @@ export default function CheckoutPage() {
   const [selectedShipping, setSelectedShipping] = useState<string>('');
   const [selectedPayment, setSelectedPayment] = useState<string>('');
   const [orderNotes, setOrderNotes] = useState('');
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [newAddress, setNewAddress] = useState({
+    label: 'Home',
+    recipient: '',
+    phone: '',
+    address: '',
+    city: '',
+    province: '',
+    postalCode: '',
+  });
 
   // Fetch cart for checkout summary
   const { data: cart, isLoading: cartLoading } = useQuery({
@@ -53,7 +63,7 @@ export default function CheckoutPage() {
   });
 
   // Fetch shipping addresses
-  const { data: addresses, isLoading: addressesLoading } = useQuery({
+  const { data: addresses, isLoading: addressesLoading, refetch: refetchAddresses } = useQuery({
     queryKey: ['shipping-addresses'],
     queryFn: async () => {
       const response = await api.get('/shipping-addresses');
@@ -93,8 +103,21 @@ export default function CheckoutPage() {
       const response = await api.post('/shipping-addresses', addressData);
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       toast.success('Address added successfully');
+      setShowAddressForm(false);
+      setNewAddress({
+        label: 'Home',
+        recipient: '',
+        phone: '',
+        address: '',
+        city: '',
+        province: '',
+        postalCode: '',
+      });
+      refetchAddresses();
+      // Auto-select the newly added address
+      setSelectedAddressId(data.id || data.shippingAddress?.id);
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to add address');
@@ -160,16 +183,35 @@ export default function CheckoutPage() {
   };
 
   const handleAddNewAddress = () => {
-    // In a real app, this would open a modal or navigate to address form
-    const newAddress = {
-      recipientName: 'New Address',
-      phone: '+6281234567890',
-      address: '123 Street, City, Province',
-      city: 'Jakarta',
-      province: 'DKI Jakarta',
-      postalCode: '12345',
-      isDefault: false,
-    };
+    setShowAddressForm(true);
+  };
+
+  const handleSaveAddress = () => {
+    // Validation
+    if (!newAddress.recipient.trim()) {
+      toast.error('Please enter recipient name');
+      return;
+    }
+    if (!newAddress.phone.trim()) {
+      toast.error('Please enter phone number');
+      return;
+    }
+    if (!newAddress.address.trim()) {
+      toast.error('Please enter address');
+      return;
+    }
+    if (!newAddress.city.trim()) {
+      toast.error('Please enter city');
+      return;
+    }
+    if (!newAddress.province.trim()) {
+      toast.error('Please enter province');
+      return;
+    }
+    if (!newAddress.postalCode.trim()) {
+      toast.error('Please enter postal code');
+      return;
+    }
 
     addAddressMutation.mutate(newAddress);
   };
@@ -395,20 +437,309 @@ export default function CheckoutPage() {
                           Add New Address
                         </Button>
                       </div>
+
+                      {/* Add New Address Form */}
+                      {showAddressForm && (
+                        <div className="mt-6 p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                          <h3 className="font-bold text-gray-900 mb-4">Add New Shipping Address</h3>
+                          <div className="space-y-4">
+                            {/* Recipient Name */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Recipient Name
+                              </label>
+                              <Input
+                                type="text"
+                                placeholder="Enter recipient name"
+                                value={newAddress.recipient}
+                                onChange={(e) =>
+                                  setNewAddress({ ...newAddress, recipient: e.target.value })
+                                }
+                              />
+                            </div>
+
+                            {/* Label */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Address Label (e.g., Home, Office)
+                              </label>
+                              <Input
+                                type="text"
+                                placeholder="Enter address label"
+                                value={newAddress.label}
+                                onChange={(e) =>
+                                  setNewAddress({ ...newAddress, label: e.target.value })
+                                }
+                              />
+                            </div>
+
+                            {/* Phone */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Phone Number
+                              </label>
+                              <Input
+                                type="tel"
+                                placeholder="Enter phone number"
+                                value={newAddress.phone}
+                                onChange={(e) =>
+                                  setNewAddress({ ...newAddress, phone: e.target.value })
+                                }
+                              />
+                            </div>
+
+                            {/* Address */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Street Address
+                              </label>
+                              <Textarea
+                                placeholder="Enter your street address"
+                                value={newAddress.address}
+                                onChange={(e) =>
+                                  setNewAddress({ ...newAddress, address: e.target.value })
+                                }
+                                rows={3}
+                              />
+                            </div>
+
+                            {/* City and Province */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  City
+                                </label>
+                                <Input
+                                  type="text"
+                                  placeholder="Enter city"
+                                  value={newAddress.city}
+                                  onChange={(e) =>
+                                    setNewAddress({ ...newAddress, city: e.target.value })
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Province
+                                </label>
+                                <Input
+                                  type="text"
+                                  placeholder="Enter province"
+                                  value={newAddress.province}
+                                  onChange={(e) =>
+                                    setNewAddress({ ...newAddress, province: e.target.value })
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            {/* Postal Code */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Postal Code
+                              </label>
+                              <Input
+                                type="text"
+                                placeholder="Enter postal code"
+                                value={newAddress.postalCode}
+                                onChange={(e) =>
+                                  setNewAddress({ ...newAddress, postalCode: e.target.value })
+                                }
+                              />
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 pt-2">
+                              <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => {
+                                  setShowAddressForm(false);
+                                  setNewAddress({
+                                    label: 'Home',
+                                    recipient: '',
+                                    phone: '',
+                                    address: '',
+                                    city: '',
+                                    province: '',
+                                    postalCode: '',
+                                  });
+                                }}
+                                disabled={addAddressMutation.isPending}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                variant="primary"
+                                className="flex-1"
+                                onClick={handleSaveAddress}
+                                disabled={addAddressMutation.isPending}
+                              >
+                                {addAddressMutation.isPending ? 'Saving...' : 'Save Address'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-600 mb-4">No shipping addresses found</p>
-                      <Button
-                        variant="outline"
-                        className="gap-2"
-                        onClick={handleAddNewAddress}
-                        disabled={addAddressMutation.isPending}
-                      >
-                        <Plus className="w-5 h-5" />
-                        Add Your First Address
-                      </Button>
+                    <div className="space-y-4">
+                      {!showAddressForm ? (
+                        <div className="text-center py-8">
+                          <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-600 mb-4">No shipping addresses found</p>
+                          <Button
+                            variant="outline"
+                            className="gap-2"
+                            onClick={handleAddNewAddress}
+                            disabled={addAddressMutation.isPending}
+                          >
+                            <Plus className="w-5 h-5" />
+                            Add Your First Address
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                          <h3 className="font-bold text-gray-900 mb-4">Add Your First Shipping Address</h3>
+                          <div className="space-y-4">
+                            {/* Recipient Name */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Recipient Name
+                              </label>
+                              <Input
+                                type="text"
+                                placeholder="Enter recipient name"
+                                value={newAddress.recipient}
+                                onChange={(e) =>
+                                  setNewAddress({ ...newAddress, recipient: e.target.value })
+                                }
+                              />
+                            </div>
+
+                            {/* Label */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Address Label (e.g., Home, Office)
+                              </label>
+                              <Input
+                                type="text"
+                                placeholder="Enter address label"
+                                value={newAddress.label}
+                                onChange={(e) =>
+                                  setNewAddress({ ...newAddress, label: e.target.value })
+                                }
+                              />
+                            </div>
+
+                            {/* Phone */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Phone Number
+                              </label>
+                              <Input
+                                type="tel"
+                                placeholder="Enter phone number"
+                                value={newAddress.phone}
+                                onChange={(e) =>
+                                  setNewAddress({ ...newAddress, phone: e.target.value })
+                                }
+                              />
+                            </div>
+
+                            {/* Address */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Street Address
+                              </label>
+                              <Textarea
+                                placeholder="Enter your street address"
+                                value={newAddress.address}
+                                onChange={(e) =>
+                                  setNewAddress({ ...newAddress, address: e.target.value })
+                                }
+                                rows={3}
+                              />
+                            </div>
+
+                            {/* City and Province */}
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  City
+                                </label>
+                                <Input
+                                  type="text"
+                                  placeholder="Enter city"
+                                  value={newAddress.city}
+                                  onChange={(e) =>
+                                    setNewAddress({ ...newAddress, city: e.target.value })
+                                  }
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Province
+                                </label>
+                                <Input
+                                  type="text"
+                                  placeholder="Enter province"
+                                  value={newAddress.province}
+                                  onChange={(e) =>
+                                    setNewAddress({ ...newAddress, province: e.target.value })
+                                  }
+                                />
+                              </div>
+                            </div>
+
+                            {/* Postal Code */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Postal Code
+                              </label>
+                              <Input
+                                type="text"
+                                placeholder="Enter postal code"
+                                value={newAddress.postalCode}
+                                onChange={(e) =>
+                                  setNewAddress({ ...newAddress, postalCode: e.target.value })
+                                }
+                              />
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 pt-2">
+                              <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => {
+                                  setShowAddressForm(false);
+                                  setNewAddress({
+                                    label: 'Home',
+                                    recipient: '',
+                                    phone: '',
+                                    address: '',
+                                    city: '',
+                                    province: '',
+                                    postalCode: '',
+                                  });
+                                }}
+                                disabled={addAddressMutation.isPending}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                variant="primary"
+                                className="flex-1"
+                                onClick={handleSaveAddress}
+                                disabled={addAddressMutation.isPending}
+                              >
+                                {addAddressMutation.isPending ? 'Saving...' : 'Save Address'}
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

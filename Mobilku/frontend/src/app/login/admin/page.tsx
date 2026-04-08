@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/lib/components/ui/Button';
 import { Input } from '@/lib/components/ui/Input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/lib/components/ui/Card';
 import { LogIn, Eye, EyeOff, Shield } from 'lucide-react';
+import GuestLayout from '@/lib/components/layout/GuestLayout';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
@@ -16,7 +16,6 @@ export default function AdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { login } = useAuth();
-  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +23,7 @@ export default function AdminLoginPage() {
 
     try {
       await login(email, password);
-      router.push('/');
+      // Don't redirect here - login() already handles role-based redirect
     } catch (error) {
       // Error sudah ditangani di AuthContext
     } finally {
@@ -33,7 +32,8 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100 p-4">
+    <GuestLayout>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100 p-4">
       <div className="w-full max-w-md">
         {/* Admin Card */}
         <Card>
@@ -102,5 +102,6 @@ export default function AdminLoginPage() {
         </Card>
       </div>
     </div>
+    </GuestLayout>
   );
 }

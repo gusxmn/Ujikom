@@ -6,7 +6,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
   fullWidth?: boolean;
   children?: ReactNode;
-  asChild?: boolean;
+  asChild?: boolean; // Accept but ignore asChild
 }
 
 export const Button = ({
@@ -17,7 +17,7 @@ export const Button = ({
   className = '',
   children,
   disabled,
-  asChild = false,
+  asChild = false, // Accept but ignore
   ...props
 }: ButtonProps) => {
   const baseStyles = 'font-medium rounded-lg transition flex items-center justify-center';
@@ -51,22 +51,14 @@ export const Button = ({
     children
   );
 
-  if (asChild) {
-    return (
-      <a
-        className={buttonClasses}
-        {...(props as any)}
-      >
-        {buttonContent}
-      </a>
-    );
-  }
+  // Filter out asChild prop to avoid React warning
+  const { asChild: _, ...restProps } = props as any;
 
   return (
     <button
       className={buttonClasses}
       disabled={isLoading || disabled}
-      {...(props as any)}
+      {...restProps}
     >
       {buttonContent}
     </button>

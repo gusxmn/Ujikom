@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -48,24 +49,41 @@ import {
   Upload,
   RefreshCw,
   SortAsc,
-  SortDesc
+  SortDesc,
+  Loader2,
 } from 'lucide-react';
 import { formatPrice, formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import Link from 'next/link';
 
 export default function AdminProductsPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [sortField, setSortField] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState('desc');
-  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<number | null>(null);
   const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+
+  const refreshProducts = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  const handleEditProduct = (id: number) => {
+    router.push(`/admin/products/${id}/edit`);
+  };
+
+  const handleViewProduct = (slug: string) => {
+    router.push(`/products/${slug}?from=admin`);
+  };
 
   // Check if user is admin
   useEffect(() => {
@@ -89,28 +107,78 @@ export default function AdminProductsPage() {
   }, []);
 
   // Fetch products
-  const { data: products, isLoading, refetch } = useQuery({
-    queryKey: ['admin-products', search, categoryFilter, statusFilter, sortField, sortDirection],
-    queryFn: async () => {
+  useEffect(() => {
+    if (!user || user.role !== 'ADMIN') {
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        setCurrentPage(1);
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (categoryFilter !== 'all') params.append('categoryId', categoryFilter);
+        params.append('sortBy', sortField);
+        params.append('sortOrder', sortDirection);
+        params.append('page', '1');
+        params.append('limit', '20'); // Changed from 100 to 20 for better performance
+        
+        const response = await api.get(`/products?${params}`);
+        const productsArray = response.data?.data || [];
+        const meta = response.data?.meta;
+        
+        setProducts(productsArray);
+        setTotalPages(meta?.totalPages || 0);
+        setHasMore(1 < (meta?.totalPages || 0));
+      } catch (error) {
+        console.error('Failed to fetch products:', error);
+        setProducts([]);
+        setTotalPages(0);
+        setHasMore(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [search, categoryFilter, sortField, sortDirection, user, refreshTrigger]);
+
+  // Load more products
+  const handleLoadMore = async () => {
+    try {
+      setIsLoadingMore(true);
+      const nextPage = currentPage + 1;
       const params = new URLSearchParams();
       if (search) params.append('search', search);
-      if (categoryFilter !== 'all') params.append('category', categoryFilter);
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      params.append('sort', sortField);
-      params.append('order', sortDirection);
+      if (categoryFilter !== 'all') params.append('categoryId', categoryFilter);
+      params.append('sortBy', sortField);
+      params.append('sortOrder', sortDirection);
+      params.append('page', nextPage.toString());
+      params.append('limit', '20');
       
-      const response = await api.get(`/admin/products?${params}`);
-      return response.data;
-    },
-    enabled: !!user && user.role === 'ADMIN',
-  });
+      const response = await api.get(`/products?${params}`);
+      const newProducts = response.data?.data || [];
+      const meta = response.data?.meta;
+      
+      setProducts(prev => [...prev, ...newProducts]);
+      setCurrentPage(nextPage);
+      setHasMore(nextPage < (meta?.totalPages || 0));
+    } catch (error) {
+      console.error('Failed to load more products:', error);
+      toast.error('Failed to load more products');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
 
   // Delete product mutation
   const deleteProductMutation = useMutation({
-    mutationFn: (productId: number) => api.delete(`/admin/products/${productId}`),
+    mutationFn: (productId: number) => api.delete(`/products/${productId}`),
     onSuccess: () => {
       toast.success('Product deleted successfully');
-      refetch();
+      refreshProducts();
       setDeleteDialogOpen(false);
       setProductToDelete(null);
     },
@@ -120,26 +188,15 @@ export default function AdminProductsPage() {
   });
 
   // Bulk delete mutation
-  const bulkDeleteMutation = useMutation({
-    mutationFn: (productIds: number[]) => 
-      api.post('/admin/products/bulk-delete', { productIds }),
-    onSuccess: () => {
-      toast.success('Selected products deleted successfully');
-      setSelectedProducts([]);
-      refetch();
-    },
-    onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to delete products');
-    },
-  });
+  // REMOVED - No longer needed for bulk operations
 
   // Toggle product status mutation
   const toggleStatusMutation = useMutation({
     mutationFn: ({ productId, status }: { productId: number; status: string }) =>
-      api.patch(`/admin/products/${productId}/status`, { status }),
+      api.patch(`/products/${productId}/status`, { status }),
     onSuccess: () => {
       toast.success('Product status updated');
-      refetch();
+      refreshProducts();
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Failed to update status');
@@ -156,30 +213,15 @@ export default function AdminProductsPage() {
   };
 
   const handleSelectAll = () => {
-    if (selectedProducts.length === products?.length) {
-      setSelectedProducts([]);
-    } else {
-      setSelectedProducts(products?.map((p: any) => p.id) || []);
-    }
+    // REMOVED - Selection functionality no longer needed
   };
 
   const handleSelectProduct = (productId: number) => {
-    setSelectedProducts(prev =>
-      prev.includes(productId)
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
+    // REMOVED - Selection functionality no longer needed
   };
 
   const handleBulkDelete = () => {
-    if (selectedProducts.length === 0) {
-      toast.error('No products selected');
-      return;
-    }
-    
-    if (confirm(`Are you sure you want to delete ${selectedProducts.length} products?`)) {
-      bulkDeleteMutation.mutate(selectedProducts);
-    }
+    // REMOVED - Bulk delete functionality no longer needed
   };
 
   const handleExportProducts = () => {
@@ -260,7 +302,7 @@ export default function AdminProductsPage() {
                 <select
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="px-3 py-2 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value="all">All Categories</option>
                   {categories.map((category) => (
@@ -270,23 +312,12 @@ export default function AdminProductsPage() {
                   ))}
                 </select>
 
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                >
-                  <option value="all">All Status</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                  <option value="out_of_stock">Out of Stock</option>
-                </select>
-
                 <Button
                   variant="outline"
                   onClick={() => {
                     setSearch('');
                     setCategoryFilter('all');
-                    setStatusFilter('all');
+
                   }}
                   className="gap-2"
                 >
@@ -297,35 +328,7 @@ export default function AdminProductsPage() {
             </div>
 
             {/* Bulk Actions */}
-            {selectedProducts.length > 0 && (
-              <div className="flex items-center justify-between mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center gap-2">
-                  <Check className="w-4 h-4 text-blue-600" />
-                  <span className="text-blue-700 font-medium">
-                    {selectedProducts.length} product(s) selected
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={handleBulkDelete}
-                    disabled={bulkDeleteMutation.isPending}
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete Selected
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setSelectedProducts([])}
-                  >
-                    Clear Selection
-                  </Button>
-                </div>
-              </div>
-            )}
+            {/* REMOVED - Bulk actions no longer available */}
 
             {/* Import/Export */}
             <div className="flex flex-wrap gap-3 mt-4">
@@ -353,7 +356,7 @@ export default function AdminProductsPage() {
 
         {/* Products Table */}
         <Card>
-          <CardContent className="p-0">
+          <CardContent className="p-0" style={{ position: 'relative' }}>
             {isLoading ? (
               <div className="p-8">
                 <div className="animate-pulse space-y-3">
@@ -367,14 +370,6 @@ export default function AdminProductsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-12">
-                        <input
-                          type="checkbox"
-                          checked={selectedProducts.length === products?.length}
-                          onChange={handleSelectAll}
-                          className="rounded border-gray-300"
-                        />
-                      </TableHead>
                       <TableHead className="w-20">Image</TableHead>
                       <TableHead>
                         <button
@@ -383,15 +378,6 @@ export default function AdminProductsPage() {
                         >
                           Product Name
                           {renderSortIcon('name')}
-                        </button>
-                      </TableHead>
-                      <TableHead>
-                        <button
-                          onClick={() => handleSort('sku')}
-                          className="flex items-center hover:text-gray-900"
-                        >
-                          SKU
-                          {renderSortIcon('sku')}
                         </button>
                       </TableHead>
                       <TableHead>
@@ -410,6 +396,15 @@ export default function AdminProductsPage() {
                         >
                           Price
                           {renderSortIcon('price')}
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button
+                          onClick={() => handleSort('sku')}
+                          className="flex items-center hover:text-gray-900"
+                        >
+                          SKU
+                          {renderSortIcon('sku')}
                         </button>
                       </TableHead>
                       <TableHead>
@@ -446,14 +441,6 @@ export default function AdminProductsPage() {
                     {products.map((product: any) => (
                       <TableRow key={product.id} className="hover:bg-gray-50">
                         <TableCell>
-                          <input
-                            type="checkbox"
-                            checked={selectedProducts.includes(product.id)}
-                            onChange={() => handleSelectProduct(product.id)}
-                            className="rounded border-gray-300"
-                          />
-                        </TableCell>
-                        <TableCell>
                           <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
                             {product.images?.[0] ? (
                               <img
@@ -479,11 +466,6 @@ export default function AdminProductsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                            {product.sku}
-                          </code>
-                        </TableCell>
-                        <TableCell>
                           <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
                             {product.category?.name || 'Uncategorized'}
                           </span>
@@ -497,6 +479,11 @@ export default function AdminProductsPage() {
                               </p>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded font-mono">
+                            {product.sku || 'N/A'}
+                          </span>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -514,16 +501,18 @@ export default function AdminProductsPage() {
                         </TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            product.status === 'active' ? 'bg-green-100 text-green-800' :
-                            product.status === 'inactive' ? 'bg-gray-100 text-gray-800' :
+                            product.isActive && product.stock > 0 ? 'bg-green-100 text-green-800' :
+                            product.isActive && product.stock === 0 ? 'bg-yellow-100 text-yellow-800' :
                             'bg-red-100 text-red-800'
                           }`}>
-                            {product.status === 'active' ? (
+                            {product.isActive && product.stock > 0 ? (
                               <Check className="w-3 h-3 mr-1" />
-                            ) : product.status === 'inactive' ? (
+                            ) : product.isActive && product.stock === 0 ? (
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                            ) : (
                               <X className="w-3 h-3 mr-1" />
-                            ) : null}
-                            {product.status.replace('_', ' ')}
+                            )}
+                            {product.isActive ? product.stock > 0 ? 'In Stock' : 'Out of Stock' : 'Inactive'}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -534,46 +523,18 @@ export default function AdminProductsPage() {
                         <TableCell>
                           <div className="flex justify-end">
                             <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm">
-                                  <MoreVertical className="w-4 h-4" />
-                                </Button>
+                              <DropdownMenuTrigger>
+                                <MoreVertical className="w-4 h-4" />
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <Link href={`/products/${product.slug}`} target="_blank">
-                                  <DropdownMenuItem>
-                                    <Eye className="w-4 h-4 mr-2" />
-                                    View Product
-                                  </DropdownMenuItem>
-                                </Link>
-                                <Link href={`/admin/products/${product.id}/edit`}>
-                                  <DropdownMenuItem>
-                                    <Edit className="w-4 h-4 mr-2" />
-                                    Edit Product
-                                  </DropdownMenuItem>
-                                </Link>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    const newStatus = product.status === 'active' ? 'inactive' : 'active';
-                                    toggleStatusMutation.mutate({
-                                      productId: product.id,
-                                      status: newStatus
-                                    });
-                                  }}
-                                >
-                                  {product.status === 'active' ? (
-                                    <>
-                                      <X className="w-4 h-4 mr-2" />
-                                      Deactivate
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Check className="w-4 h-4 mr-2" />
-                                      Activate
-                                    </>
-                                  )}
+                                <DropdownMenuItem onClick={() => handleViewProduct(product.slug)}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Product
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleEditProduct(product.id)}>
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit Product
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
@@ -602,21 +563,41 @@ export default function AdminProductsPage() {
                   No products found
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  {search ? 'Try adjusting your search or filters' : 'Get started by adding your first product'}
+                  {search ? 'Try adjusting your search or filters' : 'Add a product to get started'}
                 </p>
-                <Link href="/admin/products/new">
-                  <Button variant="primary" className="gap-2">
-                    <Plus className="w-4 h-4" />
-                    Add Product
-                  </Button>
-                </Link>
+              </div>
+            )}
+            
+            {/* Load More Button */}
+            {hasMore && products.length > 0 && (
+              <div className="p-6 text-center border-t border-gray-200">
+                <Button
+                  variant="outline"
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="gap-2"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading more...
+                    </>
+                  ) : (
+                    `Load More (Page ${currentPage + 1} of ${totalPages})`
+                  )}
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Delete Confirmation Dialog */}
-        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <Dialog 
+          open={deleteDialogOpen} 
+          onOpenChange={setDeleteDialogOpen}
+          closeOnBackdropClick={!deleteProductMutation.isPending}
+          closeOnEscape={!deleteProductMutation.isPending}
+        >
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Delete Product</DialogTitle>

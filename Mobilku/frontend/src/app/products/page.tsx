@@ -30,8 +30,10 @@ export default function ProductsPage() {
     queryFn: async () => {
       let url = '/products?limit=20&page=1';
       if (searchTerm) url += `&search=${searchTerm}`;
-      if (selectedCategory) url += `&category=${selectedCategory}`;
+      if (selectedCategory) url += `&categoryId=${selectedCategory}`;
+      console.log('🔍 Fetching products with URL:', url);
       const response = await api.get(url);
+      console.log('✅ Products received:', response.data.data);
       return response.data.data || [];
     },
   });
@@ -104,7 +106,7 @@ export default function ProductsPage() {
                       className={`w-full text-left px-3 py-2 rounded ${
                         !selectedCategory
                           ? 'bg-blue-600 text-white'
-                          : 'text-gray-700 hover:bg-gray-100'
+                          : 'bg-white text-gray-900 hover:bg-gray-50 border border-gray-200'
                       }`}
                     >
                       Semua Kategori
@@ -116,7 +118,7 @@ export default function ProductsPage() {
                         className={`w-full text-left px-3 py-2 rounded text-sm ${
                           selectedCategory === category.id
                             ? 'bg-blue-600 text-white'
-                            : 'text-gray-700 hover:bg-gray-100'
+                            : 'bg-white text-gray-900 hover:bg-gray-50 border border-gray-200'
                         }`}
                       >
                         {category.name}
@@ -143,75 +145,85 @@ export default function ProductsPage() {
             ) : products && products.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {products.map((product: any) => (
-                  <Card key={product.id} className="hover:shadow-lg transition">
-                    <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
-                      {product.image ? (
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          No Image
-                        </div>
-                      )}
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold text-gray-900 mb-2">{product.name}</h3>
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                        {product.description || 'Deskripsi tidak tersedia'}
-                      </p>
-
-                      {/* Rating */}
-                      <div className="flex items-center gap-1 mb-3">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium text-gray-900">
-                          {product.rating || 0}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          ({product.reviews || 0} reviews)
-                        </span>
-                      </div>
-
-                      {/* Price */}
-                      <div className="text-lg font-bold text-blue-600 mb-4">
-                        Rp {product.price?.toLocaleString('id-ID') || '0'}
-                      </div>
-
-                      {/* Stock */}
-                      <div className="text-sm mb-4">
-                        {product.stock && product.stock > 0 ? (
-                          <span className="text-green-600 font-medium">
-                            Stok: {product.stock}
-                          </span>
+                  <Link key={product.id} href={`/products/${product.slug}`}>
+                    <Card className="hover:shadow-lg transition h-full">
+                      <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
+                        {product.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
-                          <span className="text-red-600 font-medium">Stok Habis</span>
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            No Image
+                          </div>
                         )}
                       </div>
+                      <CardContent className="p-4">
+                        <h3 className="font-semibold text-gray-900 mb-2 hover:text-blue-600 transition">
+                          {product.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                          {product.description || 'Deskripsi tidak tersedia'}
+                        </p>
 
-                      {/* Buttons */}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="primary"
-                          fullWidth
-                          onClick={() => handleAddToCart(product.id)}
-                          disabled={!product.stock || product.stock <= 0}
-                          className="gap-2"
-                        >
-                          <ShoppingCart className="w-4 h-4" />
-                          Beli
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => handleAddToWishlist(product.id)}
-                          className="p-2"
-                        >
-                          <Heart className="w-5 h-5" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
+                        {/* Rating */}
+                        <div className="flex items-center gap-1 mb-3">
+                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                          <span className="text-sm font-medium text-gray-900">
+                            {product.rating || 0}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            ({product.reviews || 0} reviews)
+                          </span>
+                        </div>
+
+                        {/* Price */}
+                        <div className="text-lg font-bold text-blue-600 mb-4">
+                          Rp {product.price?.toLocaleString('id-ID') || '0'}
+                        </div>
+
+                        {/* Stock */}
+                        <div className="text-sm mb-4">
+                          {product.stock && product.stock > 0 ? (
+                            <span className="text-green-600 font-medium">
+                              Stok: {product.stock}
+                            </span>
+                          ) : (
+                            <span className="text-red-600 font-medium">Stok Habis</span>
+                          )}
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="flex gap-2">
+                          <Button
+                            variant="primary"
+                            fullWidth
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleAddToCart(product.id);
+                            }}
+                            disabled={!product.stock || product.stock <= 0}
+                            className="gap-2"
+                          >
+                            <ShoppingCart className="w-4 h-4" />
+                            Beli
+                          </Button>
+                          <Button
+                            variant="outline"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              router.push('/wishlist');
+                            }}
+                            className="p-2"
+                          >
+                            <Heart className="w-5 h-5" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             ) : (

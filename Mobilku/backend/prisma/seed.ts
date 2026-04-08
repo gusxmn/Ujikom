@@ -76,6 +76,78 @@ async function main() {
     address: 'Jl. Admin No. 2',
     role: Role.ADMIN,
   },
+  {
+    name: 'Sarah Williams',
+    email: 'sarah@example.com',
+    password: await bcrypt.hash('Sarah123!', 10),
+    phone: '081344556677',
+    address: 'Jl. Merdeka No. 100, Medan',
+    role: Role.CUSTOMER,
+  },
+  {
+    name: 'Michael Brown',
+    email: 'michael@example.com',
+    password: await bcrypt.hash('Michael123!', 10),
+    phone: '081355667788',
+    address: 'Jl. Gatot Subroto No. 50, Bekasi',
+    role: Role.CUSTOMER,
+  },
+  {
+    name: 'Emily Davis',
+    email: 'emily@example.com',
+    password: await bcrypt.hash('Emily123!', 10),
+    phone: '081366778899',
+    address: 'Jl. Ahmad Yani No. 200, Palembang',
+    role: Role.CUSTOMER,
+  },
+  {
+    name: 'David Wilson',
+    email: 'david@example.com',
+    password: await bcrypt.hash('David123!', 10),
+    phone: '0813778899AA',
+    address: 'Jl. Sudirman No. 300, Makassar',
+    role: Role.CUSTOMER,
+  },
+  {
+    name: 'Jessica Miller',
+    email: 'jessica@example.com',
+    password: await bcrypt.hash('Jessica123!', 10),
+    phone: '081388990011',
+    address: 'Jl. Gatot Kaca No. 150, Semarang',
+    role: Role.CUSTOMER,
+  },
+  {
+    name: 'Christopher Martin',
+    email: 'christopher@example.com',
+    password: await bcrypt.hash('Christopher123!', 10),
+    phone: '081399001122',
+    address: 'Jl. Imam Bonjol No. 250, Yogyakarta',
+    role: Role.CUSTOMER,
+  },
+  {
+    name: 'Lisa Anderson',
+    email: 'lisa@example.com',
+    password: await bcrypt.hash('Lisa123!', 10),
+    phone: '081400112233',
+    address: 'Jl. Pattimura No. 350, Bandung',
+    role: Role.CUSTOMER,
+  },
+  {
+    name: 'James Taylor',
+    email: 'james@example.com',
+    password: await bcrypt.hash('James123!', 10),
+    phone: '081411223344',
+    address: 'Jl. Blora No. 450, Jakarta',
+    role: Role.CUSTOMER,
+  },
+  {
+    name: 'Patricia Garcia',
+    email: 'patricia@example.com',
+    password: await bcrypt.hash('Patricia123!', 10),
+    phone: '081422334455',
+    address: 'Jl. Benda No. 550, Bogor',
+    role: Role.CUSTOMER,
+  },
 ];
 
 for (const userData of additionalUsers) {
@@ -158,6 +230,7 @@ for (const coupon of coupons) {
     {
       name: 'Toyota Fortuner',
       description: 'SUV 7-seater dengan mesin diesel 2.4L tangguh, fitur safety lengkap',
+      sku: 'SKU-TOYOTA-FORTUNER-001',
       slug: 'toyota-fortuner',
       price: 550000000,
       year: 2023,
@@ -166,12 +239,14 @@ for (const coupon of coupons) {
       mileage: 10000,
       color: 'Hitam',
       stock: 5,
+      rating: 4.5,
       images: ['fortuner1.jpg', 'fortuner2.jpg', 'fortuner3.jpg'],
       categoryId: createdCategories[0].id,
     },
     {
       name: 'Honda Civic',
       description: 'Sedan sporty dengan teknologi canggih, mesin turbo 1.5L',
+      sku: 'SKU-HONDA-CIVIC-002',
       slug: 'honda-civic',
       price: 600000000,
       year: 2023,
@@ -180,12 +255,14 @@ for (const coupon of coupons) {
       mileage: 5000,
       color: 'Putih',
       stock: 3,
+      rating: 4.6,
       images: ['civic1.jpg', 'civic2.jpg'],
       categoryId: createdCategories[1].id,
     },
     {
       name: 'Toyota Avanza',
       description: 'MPV keluarga dengan 7 seat nyaman, hemat bahan bakar',
+      sku: 'SKU-TOYOTA-AVANZA-003',
       slug: 'toyota-avanza',
       price: 250000000,
       year: 2023,
@@ -194,12 +271,14 @@ for (const coupon of coupons) {
       mileage: 15000,
       color: 'Silver',
       stock: 10,
+      rating: 4.3,
       images: ['avanza1.jpg', 'avanza2.jpg'],
       categoryId: createdCategories[2].id,
     },
     {
       name: 'BMW X5',
       description: 'SUV luxury dengan interior premium, teknologi driving assist',
+      sku: 'SKU-BMW-X5-004',
       slug: 'bmw-x5',
       price: 1500000000,
       year: 2024,
@@ -208,12 +287,14 @@ for (const coupon of coupons) {
       mileage: 0,
       color: 'Biru',
       stock: 2,
+      rating: 4.8,
       images: ['bmw1.jpg', 'bmw2.jpg', 'bmw3.jpg'],
       categoryId: createdCategories[5].id,
     },
     {
       name: 'Tesla Model 3',
       description: 'Electric vehicle dengan autopilot, akselerasi 0-100 dalam 3.3 detik',
+      sku: 'SKU-TESLA-MODEL3-005',
       slug: 'tesla-model-3',
       price: 1200000000,
       year: 2024,
@@ -222,12 +303,14 @@ for (const coupon of coupons) {
       mileage: 0,
       color: 'Putih',
       stock: 4,
+      rating: 4.9,
       images: ['tesla1.jpg', 'tesla2.jpg'],
       categoryId: createdCategories[6].id,
     },
     {
       name: 'Toyota Alphard',
       description: 'MPV premium dengan interior mewah, fitur hiburan lengkap',
+      sku: 'SKU-TOYOTA-ALPHARD-006',
       slug: 'toyota-alphard',
       price: 1200000000,
       year: 2023,
@@ -236,8 +319,41 @@ for (const coupon of coupons) {
       mileage: 20000,
       color: 'Hitam',
       stock: 3,
+      rating: 4.7,
       images: ['alphard1.jpg', 'alphard2.jpg'],
       categoryId: createdCategories[2].id,
+    },
+    {
+      name: 'Nissan GT-R',
+      description: 'Sports car dengan performa tinggi, akselerasi 0-100 dalam 2.7 detik',
+      sku: 'SKU-NISSAN-GTR-007',
+      slug: 'nissan-gt-r',
+      price: 2500000000,
+      year: 2024,
+      transmission: Transmission.AUTOMATIC,
+      fuelType: FuelType.GASOLINE,
+      mileage: 0,
+      color: 'Merah',
+      stock: 1,
+      rating: 4.9,
+      images: ['gtr1.jpg', 'gtr2.jpg', 'gtr3.jpg'],
+      categoryId: createdCategories[4].id,
+    },
+    {
+      name: 'Honda Jazz',
+      description: 'Hatchback kompak dengan ruang interior luas, efisiensi bahan bakar tinggi',
+      sku: 'SKU-HONDA-JAZZ-008',
+      slug: 'honda-jazz',
+      price: 350000000,
+      year: 2024,
+      transmission: Transmission.AUTOMATIC,
+      fuelType: FuelType.GASOLINE,
+      mileage: 0,
+      color: 'Oranye',
+      stock: 6,
+      rating: 4.4,
+      images: ['jazz1.jpg', 'jazz2.jpg'],
+      categoryId: createdCategories[3].id,
     },
   ];
 
@@ -246,6 +362,176 @@ for (const coupon of coupons) {
       data: product,
     });
     console.log(`✅ Product created: ${product.name}`);
+  }
+
+  // Create sample orders
+  const allProducts = await prisma.product.findMany();
+  const allCustomers = await prisma.user.findMany({ where: { role: Role.CUSTOMER } });
+
+  if (allProducts.length > 0 && allCustomers.length > 0) {
+    let orderIndex = 0;
+    
+    // Helper function to create orders for specific time period
+    const createOrdersForPeriod = async (
+      orderCount: number,
+      periodName: string,
+      getOrderDate: (index: number) => Date
+    ) => {
+      for (let i = 0; i < orderCount; i++) {
+        const customerIndex = (orderIndex + i) % allCustomers.length;
+        const productIndex = (orderIndex + i) % allProducts.length;
+        const orderDate = getOrderDate(i);
+        
+        const totalAmount = allProducts[productIndex].price;
+        
+        try {
+          await prisma.order.create({
+            data: {
+              orderNumber: `ORD-2026${orderDate.getMonth().toString().padStart(2, '0')}${orderDate.getDate().toString().padStart(2, '0')}-${String(1000 + orderIndex + i).slice(-4)}`,
+              userId: allCustomers[customerIndex].id,
+              totalAmount: totalAmount,
+              status: Math.random() > 0.3 ? 'DELIVERED' : (Math.random() > 0.4 ? 'SHIPPED' : 'PROCESSING'),
+              shippingAddress: allCustomers[customerIndex].address || 'Jl. Sample No. 100, Jakarta',
+              notes: `${periodName} order`,
+              createdAt: orderDate,
+              items: {
+                create: [
+                  {
+                    productId: allProducts[productIndex].id,
+                    quantity: 1,
+                    price: totalAmount,
+                  },
+                ],
+              },
+            },
+          });
+          orderIndex++;
+        } catch (e) {
+          console.error('Error creating order:', e);
+        }
+      }
+      console.log(`✅ ${orderCount} ${periodName} orders created`);
+    };
+
+    // TODAY - Multiple orders at different times
+    await createOrdersForPeriod(3, 'Today', (index) => {
+      const date = new Date();
+      date.setHours(Math.floor(Math.random() * 24));
+      date.setMinutes(Math.floor(Math.random() * 60));
+      date.setSeconds(Math.floor(Math.random() * 60));
+      return date;
+    });
+
+    // THIS WEEK (last 6 days excluding today)
+    await createOrdersForPeriod(6, 'This Week', (index) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (index + 1)); // Days 1-6 ago
+      date.setHours(Math.floor(Math.random() * 24));
+      date.setMinutes(Math.floor(Math.random() * 60));
+      return date;
+    });
+
+    // THIS MONTH (throughout April 2026)
+    await createOrdersForPeriod(8, 'This Month', (index) => {
+      const date = new Date(2026, 3, 1); // April 1, 2026
+      date.setDate(Math.floor(Math.random() * 28) + 1); // Random day in April
+      date.setHours(Math.floor(Math.random() * 24));
+      date.setMinutes(Math.floor(Math.random() * 60));
+      return date;
+    });
+
+    // LAST MONTH (March 2026)
+    await createOrdersForPeriod(8, 'Last Month', (index) => {
+      const date = new Date(2026, 2, 1); // March 1, 2026
+      date.setDate(Math.floor(Math.random() * 28) + 1); // Random day in March
+      date.setHours(Math.floor(Math.random() * 24));
+      date.setMinutes(Math.floor(Math.random() * 60));
+      return date;
+    });
+
+    // TWO MONTHS AGO (February 2026)
+    await createOrdersForPeriod(5, 'Two Months Ago', (index) => {
+      const date = new Date(2026, 1, 1); // February 1, 2026
+      date.setDate(Math.floor(Math.random() * 28) + 1); // Random day in February
+      date.setHours(Math.floor(Math.random() * 24));
+      date.setMinutes(Math.floor(Math.random() * 60));
+      return date;
+    });
+
+    // THREE MONTHS AGO (January 2026)
+    await createOrdersForPeriod(5, 'Three Months Ago', (index) => {
+      const date = new Date(2026, 0, 1); // January 1, 2026
+      date.setDate(Math.floor(Math.random() * 28) + 1); // Random day in January
+      date.setHours(Math.floor(Math.random() * 24));
+      date.setMinutes(Math.floor(Math.random() * 60));
+      return date;
+    });
+
+    console.log(`\n✅ Total ${orderIndex} orders created with proper time distribution!`);
+  }
+
+  // Create reviews for all products
+  // Fetch all products and customers for reviews (if not already fetched)
+  let reviewProducts = await prisma.product.findMany();
+  let reviewCustomers = await prisma.user.findMany({ where: { role: Role.CUSTOMER } });
+
+  if (reviewProducts.length > 0 && reviewCustomers.length > 0) {
+    const reviewComments = {
+      positive: [
+        'Mobil ini sangat memuaskan! Kualitas sangat baik.',
+        'Performa luar biasa, saya sangat puas dengan pembelian ini.',
+        'Rekomendaasi banget! Mobil ini worth it untuk dibeli.',
+        'Sangat nyaman dan aman untuk berkendara keluarga.',
+        'Fitur-fiturnya lengkap dan mudah digunakan.',
+        'Layanan purna jual sangat responsif dan membantu.',
+        'Desain exterior dan interior sangat menawan.',
+        'Hemat bahan bakar dan performa mesin sangat baik.',
+      ],
+      good: [
+        'Bagus, namun harga sedikit mahal.',
+        'Sesuai ekspektasi, pengiriman tepat waktu.',
+        'Kenyamanan berkendara cukup baik untuk perjalanan jauh.',
+        'Spesifikasi sesuai dengan yang dijanjikan.',
+      ],
+      neutral: [
+        'Cukup memuaskan untuk harga yang ditawarkan.',
+        'Baik, tapi ada beberapa fitur yang bisa ditingkatkan.',
+      ],
+    };
+
+    for (const product of reviewProducts) {
+      // Create 2-4 reviews for each product
+      const reviewCount = Math.floor(Math.random() * 3) + 2;
+      
+      for (let i = 0; i < reviewCount; i++) {
+        const customerIndex = (reviewProducts.indexOf(product) + i) % reviewCustomers.length;
+        const ratingValue = Math.floor(Math.random() * 2) + 4; // 4 or 5 stars mostly
+        
+        let commentary = '';
+        if (ratingValue === 5) {
+          commentary = reviewComments.positive[Math.floor(Math.random() * reviewComments.positive.length)];
+        } else if (ratingValue === 4) {
+          commentary = reviewComments.good[Math.floor(Math.random() * reviewComments.good.length)];
+        } else {
+          commentary = reviewComments.neutral[Math.floor(Math.random() * reviewComments.neutral.length)];
+        }
+
+        try {
+          await prisma.review.create({
+            data: {
+              productId: product.id,
+              userId: reviewCustomers[customerIndex].id,
+              rating: ratingValue,
+              comment: commentary,
+              isActive: true,
+            },
+          });
+        } catch (e) {
+          // Skip if review already exists (unique constraint)
+        }
+      }
+      console.log(`✅ Reviews created for: ${product.name}`);
+    }
   }
 
   console.log('\n🎉 Seeding completed!');
@@ -257,8 +543,13 @@ for (const coupon of coupons) {
   console.log('\n👤 Customer:');
   console.log('  Email: customer@example.com');
   console.log('  Password: Customer123!');
-  console.log('\n🚗 Products created: 6 mobil');
-  console.log('🏷️  Categories created: 7 kategori');
+  console.log('\n� Database Summary:');
+  console.log('======================');
+  console.log('🚗 Products: 8 mobil dengan rating & reviews');
+  console.log('🏷️  Categories: 7 kategori');
+  console.log('👥 Customers: 14 test customers');
+  console.log('📦 Orders: 35 orders across different time periods');
+  console.log('⭐ Reviews: Multiple reviews per product with ratings');
 }
 
 main()

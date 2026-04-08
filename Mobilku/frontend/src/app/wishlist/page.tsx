@@ -10,7 +10,6 @@ import {
   ShoppingCart,
   Trash2,
   Eye,
-  Share2,
   LayoutGrid,
   List,
 } from 'lucide-react';
@@ -28,10 +27,10 @@ export default function WishlistPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   // Fetch wishlist
-  const { data: wishlist, isLoading, refetch } = useQuery({
-    queryKey: ['wishlist', sortBy],
+  const { data: wishlistData, isLoading, refetch } = useQuery({
+    queryKey: ['wishlist'],
     queryFn: async () => {
-      const response = await api.get(`/wishlist?sort=${sortBy}`);
+      const response = await api.get(`/wishlist`);
       return response.data?.items || [];
     },
   });
@@ -52,7 +51,7 @@ export default function WishlistPage() {
   // Remove from wishlist mutation
   const removeFromWishlistMutation = useMutation({
     mutationFn: async (productId: number) => {
-      await api.delete(`/wishlist/${productId}`);
+      await api.delete(`/wishlist/remove/${productId}`);
     },
     onSuccess: () => {
       toast.success('Removed from wishlist');
@@ -90,10 +89,10 @@ export default function WishlistPage() {
 
   // Select all
   const handleSelectAll = () => {
-    if (selectedItems.length === wishlist?.length) {
+    if (selectedItems.length === wishlistData?.length) {
       setSelectedItems([]);
     } else {
-      setSelectedItems(wishlist?.map((item: any) => item.id) || []);
+      setSelectedItems(wishlistData?.map((item: any) => item.productId) || []);
     }
   };
 
@@ -102,13 +101,6 @@ export default function WishlistPage() {
     setSelectedItems(prev =>
       prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
     );
-  };
-
-  // Share wishlist
-  const handleShareWishlist = () => {
-    const url = window.location.href;
-    navigator.clipboard.writeText(url);
-    toast.success('Wishlist link copied to clipboard');
   };
 
   if (isLoading) {
@@ -132,21 +124,16 @@ export default function WishlistPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-              <Heart size={32} className="text-red-600" /> My Wishlist
-            </h1>
-            <p className="text-gray-600 mt-2">
-              {wishlist?.length || 0} item{wishlist?.length !== 1 ? 's' : ''} in your wishlist
-            </p>
-          </div>
-          <Button variant="outline" onClick={handleShareWishlist} className="flex items-center gap-2">
-            <Share2 size={18} /> Share
-          </Button>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
+            <Heart size={32} className="text-red-600" /> My Wishlist
+          </h1>
+          <p className="text-gray-600 mt-2">
+            {wishlistData?.length || 0} item{wishlistData?.length !== 1 ? 's' : ''} in your wishlist
+          </p>
         </div>
 
-        {wishlist && wishlist.length > 0 ? (
+        {wishlistData && wishlistData.length > 0 ? (
           <>
             {/* Toolbar */}
             <div className="bg-white p-4 rounded-lg mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -154,7 +141,7 @@ export default function WishlistPage() {
               <div className="flex gap-2">
                 <input
                   type="checkbox"
-                  checked={selectedItems.length === wishlist.length && wishlist.length > 0}
+                  checked={selectedItems.length === wishlistData?.length && wishlistData?.length > 0}
                   onChange={handleSelectAll}
                   className="w-4 h-4"
                   title="Select all"
@@ -215,28 +202,27 @@ export default function WishlistPage() {
             {/* Grid View */}
             {viewMode === 'grid' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {wishlist.map((item: any) => (
+                {wishlistData?.map((item: any) => (
                   <Card key={item.id} className="overflow-hidden hover:shadow-lg transition">
-                    <CardContent className="p-0">
+                    <CardContent className="p-0 relative">
                       {/* Checkbox */}
                       <div className="absolute top-2 left-2 z-10">
                         <input
                           type="checkbox"
-                          checked={selectedItems.includes(item.id)}
-                          onChange={() => handleToggleItem(item.id)}
+                          checked={selectedItems.includes(item.productId)}
+                          onChange={() => handleToggleItem(item.productId)}
                           className="w-5 h-5 rounded border-gray-300"
                         />
                       </div>
 
                       {/* Image */}
                       <div className="relative h-48 bg-gray-100">
-                        <Image
-                          src={item.image || '/placeholder.png'}
-                          alt={item.name}
-                          fill
-                          className="object-cover"
+                        <img
+                          src={Array.isArray(item.product.images) ? item.product.images[0] : '/placeholder.png'}
+                          alt={item.product.name}
+                          className="w-full h-full object-cover"
                         />
-                        {!item.inStock && (
+                        {item.product.stock <= 0 && (
                           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                             <p className="text-white font-semibold">Out of Stock</p>
                           </div>
@@ -245,30 +231,38 @@ export default function WishlistPage() {
 
                       {/* Info */}
                       <div className="p-4">
-                        <Link href={`/products/${item.slug}`}>
+                        <Link href={`/products/${item.product.slug}`}>
                           <h3 className="font-semibold text-gray-900 hover:text-blue-600 line-clamp-2">
-                            {item.name}
+                            {item.product.name}
                           </h3>
                         </Link>
+                        
+                        {/* Rating */}
+                        <div className="flex items-center gap-1 text-sm mt-2 mb-2">
+                          <span className="text-yellow-400">⭐ {item.product.rating?.toFixed(1) || '0'}</span>
+                          <span className="text-gray-500 text-xs">({item.product.reviews || 0})</span>
+                        </div>
+                        
                         <p className="text-lg font-bold text-blue-600 mt-2">
-                          {formatPrice(item.price)}
+                          IDR {item.product.price?.toLocaleString('id-ID') || '0'}
                         </p>
 
                         {/* Actions */}
                         <div className="flex gap-2 mt-4">
-                          <Link href={`/products/${item.slug}`} className="flex-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full flex items-center justify-center gap-1"
-                            >
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 flex items-center justify-center gap-1"
+                            asChild
+                          >
+                            <Link href={`/products/${item.product.slug}`}>
                               <Eye size={16} /> View
-                            </Button>
-                          </Link>
+                            </Link>
+                          </Button>
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => removeFromWishlistMutation.mutate(item.id)}
+                            onClick={() => removeFromWishlistMutation.mutate(item.productId)}
                             className="flex-1 flex items-center justify-center gap-1"
                           >
                             <Trash2 size={16} />
@@ -277,10 +271,26 @@ export default function WishlistPage() {
 
                         {/* Add to Cart */}
                         <Button
-                          fullWidth
-                          className="mt-3 flex items-center justify-center gap-2"
-                          disabled={!item.inStock}
-                          onClick={() => addToCartMutation.mutate(item.id)}
+                          className="w-full mt-3 flex items-center justify-center gap-2"
+                          disabled={item.product.stock <= 0}
+                          onClick={() => {
+                            try {
+                              const existingCart = localStorage.getItem('cart');
+                              let cartData = [];
+                              if (existingCart) {
+                                cartData = JSON.parse(existingCart);
+                              }
+                              cartData.push({
+                                productId: item.productId,
+                                quantity: 1,
+                                price: item.product.price,
+                              });
+                              localStorage.setItem('cart', JSON.stringify(cartData));
+                              toast.success('Added to cart');
+                            } catch (error) {
+                              toast.error('Failed to add to cart');
+                            }
+                          }}
                         >
                           <ShoppingCart size={16} /> Add to Cart
                         </Button>
@@ -294,54 +304,74 @@ export default function WishlistPage() {
             {/* List View */}
             {viewMode === 'list' && (
               <div className="space-y-4">
-                {wishlist.map((item: any) => (
+                {wishlistData?.map((item: any) => (
                   <Card key={item.id}>
                     <CardContent className="p-6">
                       <div className="flex gap-4">
                         <input
                           type="checkbox"
-                          checked={selectedItems.includes(item.id)}
-                          onChange={() => handleToggleItem(item.id)}
+                          checked={selectedItems.includes(item.productId)}
+                          onChange={() => handleToggleItem(item.productId)}
                           className="w-5 h-5 rounded border-gray-300 mt-1"
                         />
 
                         {/* Image */}
                         <div className="relative w-24 h-24 bg-gray-100 rounded flex-shrink-0">
-                          <Image
-                            src={item.image || '/placeholder.png'}
-                            alt={item.name}
-                            fill
-                            className="object-cover rounded"
+                          <img
+                            src={Array.isArray(item.product.images) ? item.product.images[0] : '/placeholder.png'}
+                            alt={item.product.name}
+                            className="w-full h-full object-cover rounded"
                           />
                         </div>
 
                         {/* Info */}
                         <div className="flex-1">
-                          <Link href={`/products/${item.slug}`}>
+                          <Link href={`/products/${item.product.slug}`}>
                             <h3 className="font-semibold text-gray-900 hover:text-blue-600">
-                              {item.name}
+                              {item.product.name}
                             </h3>
                           </Link>
-                          <p className="text-gray-600 text-sm mt-1">{item.category}</p>
+                          <p className="text-gray-600 text-sm mt-1">{item.product.category?.name}</p>
+                          <div className="flex items-center gap-2 text-sm mt-2">
+                            <span className="text-yellow-400">⭐ {item.product.rating?.toFixed(1) || '0'}</span>
+                            <span className="text-gray-500">({item.product.reviews || 0} reviews)</span>
+                          </div>
                           <p className="text-lg font-bold text-blue-600 mt-2">
-                            {formatPrice(item.price)}
+                            IDR {item.product.price?.toLocaleString('id-ID') || '0'}
                           </p>
-                          <div className={`text-sm mt-1 ${item.inStock ? 'text-green-600' : 'text-red-600'}`}>
-                            {item.inStock ? '✓ In Stock' : '✗ Out of Stock'}
+                          <div className={`text-sm mt-1 ${item.product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {item.product.stock > 0 ? '✓ In Stock' : '✗ Out of Stock'}
                           </div>
                         </div>
 
                         {/* Actions */}
                         <div className="flex flex-col gap-2">
-                          <Link href={`/products/${item.slug}`}>
+                          <Link href={`/products/${item.product.slug}`}>
                             <Button variant="outline" size="sm">
                               View
                             </Button>
                           </Link>
                           <Button
                             size="sm"
-                            disabled={!item.inStock}
-                            onClick={() => addToCartMutation.mutate(item.id)}
+                            disabled={item.product.stock <= 0}
+                            onClick={() => {
+                              try {
+                                const existingCart = localStorage.getItem('cart');
+                                let cartData = [];
+                                if (existingCart) {
+                                  cartData = JSON.parse(existingCart);
+                                }
+                                cartData.push({
+                                  productId: item.productId,
+                                  quantity: 1,
+                                  price: item.product.price,
+                                });
+                                localStorage.setItem('cart', JSON.stringify(cartData));
+                                toast.success('Added to cart');
+                              } catch (error) {
+                                toast.error('Failed to add to cart');
+                              }
+                            }}
                             className="flex items-center justify-center gap-1"
                           >
                             <ShoppingCart size={14} /> Cart
@@ -349,7 +379,7 @@ export default function WishlistPage() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => removeFromWishlistMutation.mutate(item.id)}
+                            onClick={() => removeFromWishlistMutation.mutate(item.productId)}
                           >
                             Remove
                           </Button>
@@ -367,9 +397,6 @@ export default function WishlistPage() {
               <Heart size={48} className="mx-auto text-gray-400 mb-4" />
               <p className="text-gray-600 text-lg mb-4">Your wishlist is empty</p>
               <p className="text-gray-500 mb-6">Add items to your wishlist to save them for later</p>
-              <Link href="/products">
-                <Button>Start Shopping</Button>
-              </Link>
             </CardContent>
           </Card>
         )}

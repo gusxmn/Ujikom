@@ -391,15 +391,16 @@ export default function WishlistPage() {
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
-                        <Link href={`/products/${product.slug}`}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-8 h-8 p-0 bg-white rounded-full shadow-md"
-                          >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-8 h-8 p-0 bg-white rounded-full shadow-md"
+                          asChild
+                        >
+                          <Link href={`/products/${product.slug}`}>
                             <Eye className="w-4 h-4" />
-                          </Button>
-                        </Link>
+                          </Link>
+                        </Button>
                       </div>
                     </div>
 

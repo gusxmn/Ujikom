@@ -119,6 +119,9 @@ export class ProductsService {
         where,
         include: {
           category: true,
+          _count: {
+            select: { reviews: true },
+          },
         },
         skip,
         take: limit,
@@ -127,8 +130,15 @@ export class ProductsService {
       this.prisma.product.count({ where }),
     ]);
 
+    // Map products to include reviews count
+    const productsWithReviewCount = products.map((product) => ({
+      ...product,
+      reviews: product._count?.reviews || 0,
+      _count: undefined, // Remove the _count object
+    }));
+
     return {
-      data: products,
+      data: productsWithReviewCount,
       meta: {
         total,
         page,
@@ -143,6 +153,9 @@ export class ProductsService {
       where: { id, isActive: true },
       include: {
         category: true,
+        _count: {
+          select: { reviews: true },
+        },
       },
     });
 
@@ -158,6 +171,9 @@ export class ProductsService {
       where: { slug, isActive: true },
       include: {
         category: true,
+        _count: {
+          select: { reviews: true },
+        },
       },
     });
 

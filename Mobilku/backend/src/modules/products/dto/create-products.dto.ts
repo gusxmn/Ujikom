@@ -13,6 +13,11 @@ export class CreateProductDto {
   @IsOptional()
   description?: string;
 
+  @ApiProperty({ example: 'SKU-AVANZA-2024' })
+  @IsString()
+  @IsOptional()
+  sku?: string;
+
   @ApiProperty({ example: 250000000 })
   @IsNumber()
   @Min(0)

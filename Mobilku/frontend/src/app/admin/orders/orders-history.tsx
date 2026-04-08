@@ -329,12 +329,12 @@ export default function OrdersPage() {
 
                   {/* Order Actions */}
                   <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t">
-                    <Link href={`/orders/${order.id}`}>
-                      <Button variant="outline" className="gap-2">
+                    <Button variant="outline" className="gap-2" asChild>
+                      <Link href={`/orders/${order.id}`}>
                         <Eye className="w-4 h-4" />
                         View Details
-                      </Button>
-                    </Link>
+                      </Link>
+                    </Button>
                     
                     <Button
                       variant="outline"
@@ -369,12 +369,12 @@ export default function OrdersPage() {
                     )}
 
                     {order.status === 'shipped' && (
-                      <Link href={`/orders/${order.id}/track`}>
-                        <Button variant="outline" className="gap-2">
+                      <Button variant="outline" className="gap-2" asChild>
+                        <Link href={`/orders/${order.id}/track`}>
                           <Truck className="w-4 h-4" />
                           Track Order
-                        </Button>
-                      </Link>
+                        </Link>
+                      </Button>
                     )}
                   </div>
                 </CardContent>

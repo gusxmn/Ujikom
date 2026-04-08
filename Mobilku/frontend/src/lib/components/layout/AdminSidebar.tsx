@@ -16,11 +16,13 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/lib/components/ui/Button';
+import { useLogout } from '@/lib/contexts/LogoutContext';
 
 export default function AdminSidebar() {
   const { isCollapsed, setIsCollapsed, isOpen, setIsOpen } = useSidebar();
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { setShowLogoutConfirm } = useLogout();
 
   const menuItems = [
     {
@@ -106,7 +108,7 @@ export default function AdminSidebar() {
         {/* Logout */}
         <div className="p-3 border-t-2 border-black">
           <button
-            onClick={logout}
+            onClick={() => setShowLogoutConfirm(true)}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-md bg-red-600 text-white hover:bg-red-700 transition-all text-sm ${
               isCollapsed ? 'justify-center' : ''
             }`}

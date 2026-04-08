@@ -10,12 +10,8 @@ import {
   Search,
   Edit2,
   Trash2,
-  CheckCircle,
-  XCircle,
   Shield,
   User,
-  Download,
-  Plus,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import toast from 'react-hot-toast';
@@ -144,16 +140,23 @@ export default function AdminUsers() {
     });
   };
 
-  const filteredUsers = (users || []).filter((user: UserData) => {
-    if (
-      searchTerm &&
-      !user.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      !user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    ) {
-      return false;
-    }
-    return true;
-  });
+  const filteredUsers = (users || [])
+    .filter((user: UserData) => {
+      if (
+        searchTerm &&
+        !user.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a: UserData, b: UserData) => {
+      // ADMIN users appear first
+      if (a.role === 'ADMIN' && b.role !== 'ADMIN') return -1;
+      if (a.role !== 'ADMIN' && b.role === 'ADMIN') return 1;
+      return 0;
+    });
 
   if (isLoading) {
     return (
@@ -190,10 +193,6 @@ export default function AdminUsers() {
             Total: {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <Button className="flex items-center gap-2">
-          <Download size={18} />
-          Export
-        </Button>
       </div>
 
       {/* Filters */}
@@ -256,25 +255,6 @@ export default function AdminUsers() {
                         : 'bg-blue-600 text-white'
                     }`}>
                       {user.role}
-                    </span>
-
-                    {/* Status Badge */}
-                    <span className={`text-xs font-bold px-3 py-1.5 rounded-md flex items-center gap-1 whitespace-nowrap ${
-                      user.status === 'active'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-red-600 text-white'
-                    }`}>
-                      {user.status === 'active' ? (
-                        <>
-                          <CheckCircle size={14} />
-                          Active
-                        </>
-                      ) : (
-                        <>
-                          <XCircle size={14} />
-                          Inactive
-                        </>
-                      )}
                     </span>
 
                     {/* Actions */}

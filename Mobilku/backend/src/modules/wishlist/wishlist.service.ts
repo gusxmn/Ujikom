@@ -49,8 +49,11 @@ export class WishlistService {
     const wishlist = await this.getOrCreateWishlist(userId);
 
     // Check if product exists and is active
-    const product = await this.prisma.product.findUnique({
-      where: { id: addToWishlistDto.productId, isActive: true },
+    const product = await this.prisma.product.findFirst({
+      where: { 
+        id: addToWishlistDto.productId, 
+        isActive: true 
+      },
     });
 
     if (!product) {

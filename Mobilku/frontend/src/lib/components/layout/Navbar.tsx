@@ -11,6 +11,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   useEffect(() => {
     if (user?.role === 'ADMIN') {
@@ -101,8 +102,8 @@ export default function Navbar() {
                     <hr className="my-2" />
                     <button
                       onClick={() => {
-                        logout();
                         setIsMenuOpen(false);
+                        setShowLogoutConfirm(true);
                       }}
                       className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
                     >
@@ -131,6 +132,33 @@ export default function Navbar() {
           )}
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-[999]">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4">
+            <h2 className="text-lg font-bold text-black mb-2">Confirm Logout</h2>
+            <p className="text-gray-700 mb-6">Are you sure you want to log out?</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 bg-gray-200 text-black rounded-lg hover:bg-gray-300 transition font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  logout();
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+              >
+                Yes, Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Button } from '@/lib/components/ui/Button';
+import { LinkButton } from '@/lib/components/ui/LinkButton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/Card';
 import { 
   ShoppingBag,
@@ -18,12 +19,44 @@ import {
   Download,
   Calendar,
   ArrowRight,
-  MoreVertical
+  MoreVertical,
+  Star,
+  Clock
 } from 'lucide-react';
 import { formatPrice, formatNumber, formatDate } from '@/lib/utils';
 import { CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Link from 'next/link';
+
+// Helper function to format activity date
+const formatActivityDate = (dateString: string | Date) => {
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Recently';
+    }
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    
+    return date.toLocaleString('id-ID', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    return 'Recently';
+  }
+};
+
 import {
   LineChart,
   Line,
@@ -36,7 +69,8 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Legend
 } from 'recharts';
 
 export default function AdminDashboard() {
@@ -45,39 +79,47 @@ export default function AdminDashboard() {
   const [chartType, setChartType] = useState('sales');
 
   // Fetch dashboard stats
-  const { data: stats, isLoading: statsLoading, refetch } = useQuery({
+  const { data: stats, isLoading: statsLoading, isError: statsError, error: statsErrorObj, refetch } = useQuery({
     queryKey: ['admin-stats', timeRange],
     queryFn: async () => {
-      const response = await api.get(`/admin/dashboard?range=${timeRange}`);
+      console.log('📊 Fetching dashboard stats with token...');
+      const token = localStorage.getItem('token');
+      console.log('🔑 Token exists:', !!token);
+      const response = await api.get(`/dashboard?range=${timeRange}`);
+      console.log('✅ Dashboard stats received:', response.data);
       return response.data;
     },
+    retry: 2,
   });
 
   // Fetch recent activities
-  const { data: activities } = useQuery({
+  const { data: activities, isError: activitiesError } = useQuery({
     queryKey: ['admin-activities'],
     queryFn: async () => {
-      const response = await api.get('/admin/activities');
+      const response = await api.get('/dashboard/activities');
       return response.data;
     },
+    retry: 1,
   });
 
   // Fetch low stock products
-  const { data: lowStockProducts } = useQuery({
+  const { data: lowStockProducts, isError: lowStockError } = useQuery({
     queryKey: ['admin-low-stock'],
     queryFn: async () => {
-      const response = await api.get('/admin/products/low-stock');
+      const response = await api.get('/dashboard/low-stock');
       return response.data;
     },
+    retry: 1,
   });
 
   // Fetch recent orders
-  const { data: recentOrders } = useQuery({
+  const { data: recentOrders, isError: recentOrdersError } = useQuery({
     queryKey: ['admin-recent-orders'],
     queryFn: async () => {
-      const response = await api.get('/admin/orders/recent');
+      const response = await api.get('/dashboard/recent-orders');
       return response.data;
     },
+    retry: 1,
   });
 
   const handleExportData = () => {
@@ -103,6 +145,24 @@ export default function AdminDashboard() {
           <div className="h-80 bg-slate-200 rounded"></div>
           <div className="h-80 bg-slate-200 rounded"></div>
         </div>
+      </div>
+    );
+  }
+
+  if (statsError) {
+    return (
+      <div className="text-center py-16">
+        <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+        <h2 className="text-2xl font-bold text-slate-900 mb-2">
+          Oops! Error Loading Dashboard
+        </h2>
+        <p className="text-slate-600 mb-6">
+          {statsErrorObj?.message || 'Failed to load dashboard data. Please try again.'}
+        </p>
+        <Button onClick={() => refetch()} variant="primary">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Retry
+        </Button>
       </div>
     );
   }
@@ -354,18 +414,19 @@ export default function AdminDashboard() {
             <CardTitle className="text-slate-900">Category Distribution</CardTitle>
           </CardHeader>
           <CardContent className="pt-6">
-            <div className="h-80">
+            <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 10, right: 10, bottom: 50, left: 10 }}>
                   <Pie
                     data={stats?.categoryDistribution || []}
                     cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    cy="45%"
+                    labelLine={true}
+                    label={({ percent }: any) => `${(percent * 100).toFixed(0)}%`}
+                    outerRadius={70}
                     fill="#8884d8"
                     dataKey="value"
+                    paddingAngle={1}
                   >
                     {stats?.categoryDistribution?.map((_: any, index: number) => (
                       <Cell key={`cell-${index}`} fill={chartColors[index % chartColors.length]} />
@@ -374,6 +435,17 @@ export default function AdminDashboard() {
                   <Tooltip 
                     formatter={(value: any) => [formatPrice(Number(value)), 'Revenue']}
                     contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
+                  />
+                  <Legend 
+                    verticalAlign="bottom" 
+                    height={36}
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    formatter={(value: any) => {
+                      const data = stats?.categoryDistribution?.find((d: any) => d.name === value);
+                      const total = stats?.categoryDistribution?.reduce((sum: any, d: any) => sum + d.value, 0) || 1;
+                      const percent = data ? ((data.value / total) * 100).toFixed(0) : 0;
+                      return `${value}: ${percent}%`;
+                    }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -389,12 +461,10 @@ export default function AdminDashboard() {
           <CardHeader className="border-b border-slate-200">
             <div className="flex items-center justify-between">
               <CardTitle className="text-slate-900">Recent Orders</CardTitle>
-              <Link href="/admin/orders">
-                <Button variant="ghost" size="sm" className="gap-1 text-blue-600 hover:text-blue-700">
-                  View All
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
+              <LinkButton variant="ghost" size="sm" href="/admin/orders" className="gap-1 text-blue-600 hover:text-blue-700">
+                View All
+                <ArrowRight className="w-4 h-4" />
+              </LinkButton>
             </div>
           </CardHeader>
           <CardContent className="pt-6">
@@ -423,11 +493,9 @@ export default function AdminDashboard() {
                             {order.status}
                           </span>
                         </div>
-                        <Link href={`/admin/orders/${order.id}`}>
-                          <Button variant="ghost" size="sm">
-                            View
-                          </Button>
-                        </Link>
+                        <LinkButton variant="ghost" size="sm" href={`/admin/orders/${order.id}`}>
+                          View
+                        </LinkButton>
                       </div>
                     </div>
                   ))
@@ -448,12 +516,10 @@ export default function AdminDashboard() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Low Stock Products</CardTitle>
-                  <Link href="/admin/products">
-                    <Button variant="ghost" size="sm" className="gap-1">
-                      View All
-                      <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
+                  <LinkButton variant="ghost" size="sm" href="/admin/products" className="gap-1">
+                    View All
+                    <ArrowRight className="w-4 h-4" />
+                  </LinkButton>
                 </div>
               </CardHeader>
               <CardContent>
@@ -475,8 +541,10 @@ export default function AdminDashboard() {
                             )}
                           </div>
                           <div>
-                            <p className="font-medium text-sm">{product.name}</p>
-                            <p className="text-xs text-gray-600">SKU: {product.sku}</p>
+                            <p className="font-medium text-sm text-black">{product.name}</p>
+                            <span className="inline-block mt-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded font-mono">
+                              {product.sku || 'N/A'}
+                            </span>
                           </div>
                         </div>
                         <div className="text-right">
@@ -487,15 +555,14 @@ export default function AdminDashboard() {
                           }`}>
                             {product.stock} left
                           </p>
-                          <Link href={`/admin/products/${product.id}/edit`}>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="mt-1 text-xs"
-                            >
-                              Restock
-                            </Button>
-                          </Link>
+                          <LinkButton
+                            variant="ghost"
+                            size="sm"
+                            href={`/admin/products/${product.id}/edit`}
+                            className="mt-1 text-xs"
+                          >
+                            Restock
+                          </LinkButton>
                         </div>
                       </div>
                     ))}  
@@ -515,28 +582,35 @@ export default function AdminDashboard() {
                 <CardTitle className="text-slate-900">Recent Activities</CardTitle>
               </CardHeader>
               <CardContent className="pt-6">
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {activities?.length > 0 ? (
                     activities.slice(0, 5).map((activity: any) => (
                       <div
                         key={activity.id}
-                        className="flex items-start gap-3 p-2"
+                        className="flex items-start gap-4 p-3 rounded-lg hover:bg-slate-50 transition-colors border border-slate-100"
                       >
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                          {activity.type === 'order' && <ShoppingBag className="w-4 h-4 text-blue-600" />}
-                          {activity.type === 'product' && <Package className="w-4 h-4 text-blue-600" />}
-                          {activity.type === 'user' && <Users className="w-4 h-4 text-blue-600" />}
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          activity.type === 'ORDER' ? 'bg-blue-100' :
+                          activity.type === 'REVIEW' ? 'bg-amber-100' :
+                          'bg-slate-100'
+                        }`}>
+                          {activity.type === 'ORDER' && <ShoppingBag className="w-5 h-5 text-blue-600" />}
+                          {activity.type === 'REVIEW' && <Star className="w-5 h-5 text-amber-600" />}
+                          {!['ORDER', 'REVIEW'].includes(activity.type) && <Package className="w-5 h-5 text-slate-600" />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm text-slate-900 font-medium">{activity.description}</p>
-                          <p className="text-xs text-slate-600 mt-1">
-                            {formatDate(activity.createdAt)}
-                          </p>
+                          <p className="text-sm text-slate-900 font-semibold">{activity.description}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span className="text-xs text-slate-500">
+                              {formatActivityDate(activity.createdAt)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-slate-500 text-sm">No recent activities</p>
+                    <p className="text-slate-500 text-sm text-center py-6">No recent activities</p>
                   )}
                 </div>
               </CardContent>
