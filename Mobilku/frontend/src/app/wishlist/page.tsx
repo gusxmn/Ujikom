@@ -128,7 +128,7 @@ export default function WishlistPage() {
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <Heart size={32} className="text-red-600" /> My Wishlist
           </h1>
-          <p className="text-gray-600 mt-2">
+          <p className="text-black mt-2">
             {wishlistData?.length || 0} item{wishlistData?.length !== 1 ? 's' : ''} in your wishlist
           </p>
         </div>
@@ -172,7 +172,7 @@ export default function WishlistPage() {
                 <select
                   value={sortBy}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSortBy(e.target.value as SortOption)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg bg-white"
+                  className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-black"
                 >
                   <option value="recent">Recent</option>
                   <option value="price-low">Price: Low to High</option>
@@ -183,14 +183,14 @@ export default function WishlistPage() {
                 <div className="flex gap-2 border border-gray-300 rounded-lg p-1">
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`p-2 ${viewMode === 'grid' ? 'bg-gray-200' : ''}`}
+                    className={`p-2 text-black ${viewMode === 'grid' ? 'bg-gray-300' : ''}`}
                     title="Grid view"
                   >
                     <LayoutGrid size={18} />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
-                    className={`p-2 ${viewMode === 'list' ? 'bg-gray-200' : ''}`}
+                    className={`p-2 text-black ${viewMode === 'list' ? 'bg-gray-300' : ''}`}
                     title="List view"
                   >
                     <List size={18} />
@@ -240,7 +240,7 @@ export default function WishlistPage() {
                         {/* Rating */}
                         <div className="flex items-center gap-1 text-sm mt-2 mb-2">
                           <span className="text-yellow-400">⭐ {item.product.rating?.toFixed(1) || '0'}</span>
-                          <span className="text-gray-500 text-xs">({item.product.reviews || 0})</span>
+                          <span className="text-black text-xs">({item.product.reviews || 0})</span>
                         </div>
                         
                         <p className="text-lg font-bold text-blue-600 mt-2">
@@ -331,10 +331,10 @@ export default function WishlistPage() {
                               {item.product.name}
                             </h3>
                           </Link>
-                          <p className="text-gray-600 text-sm mt-1">{item.product.category?.name}</p>
+                          <p className="text-black text-sm mt-1">{item.product.category?.name}</p>
                           <div className="flex items-center gap-2 text-sm mt-2">
                             <span className="text-yellow-400">⭐ {item.product.rating?.toFixed(1) || '0'}</span>
-                            <span className="text-gray-500">({item.product.reviews || 0} reviews)</span>
+                            <span className="text-black">({item.product.reviews || 0} reviews)</span>
                           </div>
                           <p className="text-lg font-bold text-blue-600 mt-2">
                             IDR {item.product.price?.toLocaleString('id-ID') || '0'}
@@ -394,9 +394,9 @@ export default function WishlistPage() {
         ) : (
           <Card>
             <CardContent className="p-12 text-center">
-              <Heart size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600 text-lg mb-4">Your wishlist is empty</p>
-              <p className="text-gray-500 mb-6">Add items to your wishlist to save them for later</p>
+              <Heart size={48} className="mx-auto text-black mb-4" />
+              <p className="text-black text-lg mb-4">Your wishlist is empty</p>
+              <p className="text-black mb-6">Add items to your wishlist to save them for later</p>
             </CardContent>
           </Card>
         )}

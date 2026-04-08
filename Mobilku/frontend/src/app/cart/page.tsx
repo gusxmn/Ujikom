@@ -3,12 +3,13 @@
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { Card, CardContent } from '@/lib/components/ui/Card';
+import { ShoppingCart } from 'lucide-react';
 import { Button } from '@/lib/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/Card';
-import { ShoppingCart, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import CartPage from '@/lib/components/cart/page';
 
-export default function CartPage() {
+export default function CartPageWrapper() {
   const { user } = useAuth();
   const router = useRouter();
 
@@ -19,62 +20,28 @@ export default function CartPage() {
   }, [user, router]);
 
   if (!user) {
-    return null;
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Link href="/" className="flex items-center gap-2 text-blue-600 hover:text-blue-700 mb-4">
-            <ArrowLeft className="w-5 h-5" />
-            Kembali
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
-          <p className="text-gray-600 mt-2">Kelola item belanja Anda</p>
-        </div>
-
-        {/* Empty Cart */}
-        <div className="text-center py-16">
-          <ShoppingCart className="w-24 h-24 text-gray-300 mx-auto mb-6" />
-          <h2 className="text-2xl font-bold text-gray-700 mb-3">Keranjang Belanja Kosong</h2>
-          <p className="text-gray-600 mb-8">Mulai belanja untuk menambahkan item ke keranjang</p>
-          <Link href="/products">
-            <Button variant="primary" className="gap-2">
-              Lihat Produk
-            </Button>
-          </Link>
-        </div>
-
-        {/* Cart Summary */}
-        <Card className="max-w-md mx-auto mt-12">
-          <CardHeader>
-            <CardTitle>Ringkasan Pesanan</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-semibold">Rp 0</span>
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 flex items-center justify-center">
+        <Card className="max-w-md bg-white shadow-xl">
+          <CardContent className="p-8 text-center">
+            <ShoppingCart className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Please Login</h2>
+            <p className="text-gray-600 mb-6">
+              You need to be logged in to view your cart
+            </p>
+            <div className="flex gap-3">
+              <Link href="/login" className="flex-1">
+                <Button className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white">Login</Button>
+              </Link>
+              <Link href="/register" className="flex-1">
+                <Button variant="outline" className="w-full border-slate-300 hover:bg-blue-50">Register</Button>
+              </Link>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Ongkos Kirim</span>
-              <span className="font-semibold">Rp 0</span>
-            </div>
-            <div className="border-t border-gray-200 pt-4 flex justify-between">
-              <span className="font-semibold">Total</span>
-              <span className="text-xl font-bold text-blue-600">Rp 0</span>
-            </div>
-            <Button
-              disabled
-              fullWidth
-              className="mt-4"
-            >
-              Proses Checkout
-            </Button>
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <CartPage />;
 }
