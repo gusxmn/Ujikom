@@ -218,7 +218,21 @@ export default function ProductDetailPage() {
 
   const mainVariant = product.variants?.[0] || product;
   const currentProduct = selectedVariant || mainVariant;
-  const images = currentProduct.images || product.images || [];
+  
+  // Parse images from JSON (images are stored as JSON string with { filename, url } objects)
+  let images: string[] = [];
+  try {
+    const imageSrc = currentProduct.images || product.images || [];
+    if (typeof imageSrc === 'string') {
+      const parsed = JSON.parse(imageSrc);
+      images = Array.isArray(parsed) ? parsed.map((img: any) => img.url || img) : [];
+    } else if (Array.isArray(imageSrc)) {
+      images = imageSrc.map((img: any) => typeof img === 'string' ? img : img.url);
+    }
+  } catch (e) {
+    console.error('Failed to parse images:', e);
+  }
+  
   const discountPercentage = product.originalPrice 
     ? Math.round((1 - Number(product.price) / Number(product.originalPrice)) * 100)
     : 0;
@@ -400,22 +414,22 @@ export default function ProductDetailPage() {
             <div className="mb-6">
               <h3 className="font-medium text-gray-900 mb-3">Quantity:</h3>
               <div className="flex items-center gap-4">
-                <div className="flex items-center border rounded-lg">
+                <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-12 w-12 rounded-r-none"
+                    className="h-12 w-12 rounded-none text-slate-800 hover:bg-slate-100 font-bold text-lg"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   >
                     <Minus className="w-5 h-5" />
                   </Button>
-                  <span className="w-16 text-center text-lg font-medium">
+                  <span className="w-16 text-center text-lg font-bold text-slate-800 py-3 border-l border-r border-slate-300">
                     {quantity}
                   </span>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-12 w-12 rounded-l-none"
+                    className="h-12 w-12 rounded-none text-slate-800 hover:bg-slate-100 font-bold text-lg"
                     onClick={() => setQuantity(quantity + 1)}
                     disabled={quantity >= currentProduct.stock}
                   >
@@ -596,19 +610,37 @@ export default function ProductDetailPage() {
                   <Card className="h-full hover:shadow-lg transition-shadow">
                     <CardContent className="p-4">
                       <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden mb-3">
-                        {relatedProduct.images?.[0] ? (
-                          <Image
-                            src={relatedProduct.images[0]}
-                            alt={relatedProduct.name}
-                            width={200}
-                            height={200}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            <Package className="w-12 h-12" />
-                          </div>
-                        )}
+                        {(() => {
+                          try {
+                            let imageUrl = null;
+                            const imageData = relatedProduct.images;
+                            if (typeof imageData === 'string') {
+                              const parsed = JSON.parse(imageData);
+                              imageUrl = Array.isArray(parsed) ? parsed[0]?.url || parsed[0] : null;
+                            } else if (Array.isArray(imageData) && imageData.length > 0) {
+                              imageUrl = typeof imageData[0] === 'string' ? imageData[0] : imageData[0]?.url;
+                            }
+                            return imageUrl ? (
+                              <Image
+                                src={imageUrl}
+                                alt={relatedProduct.name}
+                                width={200}
+                                height={200}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <Package className="w-12 h-12" />
+                              </div>
+                            );
+                          } catch (e) {
+                            return (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <Package className="w-12 h-12" />
+                              </div>
+                            );
+                          }
+                        })()}
                       </div>
                       <h3 className="font-medium text-gray-900 line-clamp-2 mb-1">
                         {relatedProduct.name}

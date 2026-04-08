@@ -26,7 +26,7 @@ import {
   Plus,
   Trash2
 } from 'lucide-react';
-import { formatDate, formatPrice } from '@/lib/utils';
+import { formatDate, formatPrice, getFirstImageUrl } from '@/lib/utils';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
@@ -567,9 +567,9 @@ function OrderCard({ order }: { order: any }) {
           {order.items.slice(0, 3).map((item: any) => (
             <div key={item.id} className="flex items-center gap-2 min-w-0 flex-shrink-0">
               <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
-                {item.product.images?.[0] && (
+                {getFirstImageUrl(item.product.images) && (
                   <img
-                    src={item.product.images[0]}
+                    src={getFirstImageUrl(item.product.images)!}
                     alt={item.product.name}
                     className="w-full h-full object-cover"
                   />
@@ -606,9 +606,9 @@ function WishlistItemCard({ item }: { item: any }) {
         <CardContent className="p-4">
           {/* Product Image */}
           <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden mb-3">
-            {product.images?.[0] ? (
+            {getFirstImageUrl(product.images) ? (
               <img
-                src={product.images[0]}
+                src={getFirstImageUrl(product.images)!}
                 alt={product.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
               />

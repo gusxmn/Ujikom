@@ -87,6 +87,7 @@ export class UsersService {
           avatar: true,
           isActive: true,
           createdAt: true,
+          updatedAt: true,
           _count: {
             select: {
               orders: true,

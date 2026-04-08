@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
 import { LoginDto, RegisterDto, RegisterAdminDto } from './dto';
+import { MailService } from './mail.service';
 
 @Injectable()
 export class AuthService {
@@ -11,6 +12,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
@@ -155,5 +157,85 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async forgotPassword(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      // Return success anyway for security (don't reveal if email exists)
+      return { 
+        message: 'If an account exists with this email, a password reset link has been sent' 
+      };
+    }
+
+    // Generate reset token with 1 hour expiration
+    const resetToken = this.jwtService.sign(
+      { email, purpose: 'password-reset' },
+      { expiresIn: '1h' }
+    );
+
+    try {
+      // Send email with reset link
+      const result = await this.mailService.sendPasswordResetEmail(email, resetToken);
+      
+      // For development/testing only - return preview URL
+      const response: any = { 
+        message: 'If an account exists with this email, a password reset link has been sent' 
+      };
+      
+      if (result?.url && process.env.NODE_ENV !== 'production') {
+        response.previewUrl = result.url;
+        response.testResetUrl = `http://localhost:3000/reset-password?token=${resetToken}`;
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      // Still return success message for security
+      return { 
+        message: 'If an account exists with this email, a password reset link has been sent' 
+      };
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    try {
+      // Verify token
+      const decoded = this.jwtService.verify(token);
+      
+      if (decoded.purpose !== 'password-reset') {
+        throw new UnauthorizedException('Invalid reset token');
+      }
+
+      const user = await this.prisma.user.findUnique({
+        where: { email: decoded.email },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // Hash new password
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password
+      await this.prisma.user.update({
+        where: { id: user.id },
+        data: { password: hashedPassword },
+      });
+
+      return { message: 'Password reset successful' };
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Reset token has expired');
+      }
+      if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException('Invalid reset token');
+      }
+      throw error;
+    }
   }
 }

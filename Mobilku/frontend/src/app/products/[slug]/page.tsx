@@ -41,7 +41,7 @@ interface Product {
     name: string;
     slug: string;
   };
-  images: string[];
+  images: string | any[]; // Can be JSON string or array
   isActive: boolean;
   createdAt: string;
 }
@@ -208,7 +208,19 @@ export default function ProductDetailPage() {
     );
   }
 
-  const images = Array.isArray(product.images) ? product.images : [];
+  // Parse images from JSON (images are stored as JSON string with { filename, url } objects)
+  let images: string[] = [];
+  try {
+    if (typeof product.images === 'string') {
+      const parsed = JSON.parse(product.images);
+      images = Array.isArray(parsed) ? parsed.map((img: any) => img.url || img) : [];
+    } else if (Array.isArray(product.images)) {
+      images = product.images.map((img: any) => typeof img === 'string' ? img : img.url);
+    }
+  } catch (e) {
+    console.error('Failed to parse images:', e);
+  }
+  
   const displayImage = images.length > 0 ? images[selectedImage] : '/placeholder-car.png';
 
   return (
@@ -306,7 +318,7 @@ export default function ProductDetailPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-10 h-10 border border-slate-300 rounded hover:bg-slate-100 transition"
+                  className="w-10 h-10 border border-slate-300 rounded hover:border-slate-800 transition text-slate-800 font-bold"
                 >
                   −
                 </button>
@@ -314,13 +326,13 @@ export default function ProductDetailPage() {
                   type="number"
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-16 text-center border border-slate-300 rounded py-2"
+                  className="w-16 text-center border border-slate-300 rounded py-2 text-slate-800 font-bold"
                   min="1"
                   max={product.stock}
                 />
                 <button
                   onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
-                  className="w-10 h-10 border border-slate-300 rounded hover:bg-slate-100 transition"
+                  className="w-10 h-10 border border-slate-300 rounded hover:border-slate-800 transition text-slate-800 font-bold"
                 >
                   +
                 </button>

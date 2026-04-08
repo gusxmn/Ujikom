@@ -4,6 +4,7 @@ import { Star, ShoppingCart, Heart } from 'lucide-react';
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ProductCardProps {
   id: string;
@@ -27,6 +28,7 @@ export default function ProductCard({
   stock = 0,
 }: ProductCardProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAddToCart = async () => {
@@ -46,8 +48,8 @@ export default function ProductCard({
       // Add to wishlist via API
       await api.post('/wishlist/add', { productId: parseInt(id, 10) });
       toast.success('Added to wishlist!');
-      // Navigate to wishlist page after adding
-      router.push('/wishlist');
+      // Invalidate wishlist query to refetch
+      queryClient.invalidateQueries({ queryKey: ['wishlist'] });
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Failed to add to wishlist';
       toast.error(errorMessage);

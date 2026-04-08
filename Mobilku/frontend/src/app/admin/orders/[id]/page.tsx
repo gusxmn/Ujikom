@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import ProtectedRoute from '@/lib/components/ProtectedRoute';
 import { Button } from '@/lib/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/Card';
 import {
@@ -122,62 +123,69 @@ export default function OrderDetailPage() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+      <ProtectedRoute requiredRole="ADMIN">
+        <div className="min-h-screen bg-gray-50 p-6">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+            <div className="h-64 bg-gray-200 rounded"></div>
+          </div>
         </div>
-      </div>
+      </ProtectedRoute>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="mb-6 gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-            <p className="text-red-800 font-semibold flex items-center gap-2">
-              <AlertCircle className="w-5 h-5" />
-              Error loading order details
-            </p>
-            <p className="text-red-600 text-sm mt-2">{error?.message}</p>
+      <ProtectedRoute requiredRole="ADMIN">
+        <div className="min-h-screen bg-gray-50 p-6">
+          <div className="max-w-4xl mx-auto">
+            <Button
+              variant="outline"
+              onClick={() => router.back()}
+              className="mb-6 gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+              <p className="text-red-800 font-semibold flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                Error loading order details
+              </p>
+              <p className="text-red-600 text-sm mt-2">{error?.message}</p>
+            </div>
           </div>
         </div>
-      </div>
+      </ProtectedRoute>
     );
   }
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-4xl mx-auto">
-          <Button
-            variant="outline"
-            onClick={() => router.back()}
-            className="mb-6 gap-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-            <p className="text-yellow-800 font-semibold">Order not found</p>
+      <ProtectedRoute requiredRole="ADMIN">
+        <div className="min-h-screen bg-gray-50 p-6">
+          <div className="max-w-4xl mx-auto">
+            <Button
+              variant="outline"
+              onClick={() => router.back()}
+              className="mb-6 gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+              <p className="text-yellow-800 font-semibold">Order not found</p>
+            </div>
           </div>
         </div>
-      </div>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <ProtectedRoute requiredRole="ADMIN">
+      <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -367,6 +375,7 @@ export default function OrderDetailPage() {
           </Card>
         )}
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

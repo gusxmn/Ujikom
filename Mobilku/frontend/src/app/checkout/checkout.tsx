@@ -958,17 +958,35 @@ export default function CheckoutPage() {
                       {cartItems.map((item: any) => (
                         <div key={item.id} className="flex gap-3">
                           <div className="w-16 h-16 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                            {item.product.images?.[0] ? (
-                              <img
-                                src={item.product.images[0]}
-                                alt={item.product.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                <Package className="w-6 h-6" />
-                              </div>
-                            )}
+                            {(() => {
+                              try {
+                                let imageUrl = null;
+                                const imageData = item.product.images;
+                                if (typeof imageData === 'string') {
+                                  const parsed = JSON.parse(imageData);
+                                  imageUrl = Array.isArray(parsed) ? parsed[0]?.url || parsed[0] : null;
+                                } else if (Array.isArray(imageData) && imageData.length > 0) {
+                                  imageUrl = typeof imageData[0] === 'string' ? imageData[0] : imageData[0]?.url;
+                                }
+                                return imageUrl ? (
+                                  <img
+                                    src={imageUrl}
+                                    alt={item.product.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                    <Package className="w-6 h-6" />
+                                  </div>
+                                );
+                              } catch (e) {
+                                return (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                    <Package className="w-6 h-6" />
+                                  </div>
+                                );
+                              }
+                            })()}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-sm text-gray-900 truncate">

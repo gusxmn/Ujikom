@@ -224,11 +224,27 @@ export default function CartPage() {
                     <div key={item.id} className="p-6 hover:bg-slate-50">
                       <div className="flex gap-4">
                         <div className="w-24 h-24 bg-slate-100 rounded-lg flex-shrink-0">
-                          {item.product.images?.[0] ? (
-                            <img src={item.product.images[0]} alt={item.product.name} className="w-full h-full object-cover rounded-lg" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="text-gray-400" /></div>
-                          )}
+                          {(() => {
+                            try {
+                              let imageUrl = null;
+                              const imageData = item.product.images;
+                              if (typeof imageData === 'string') {
+                                const parsed = JSON.parse(imageData);
+                                imageUrl = Array.isArray(parsed) ? parsed[0]?.url || parsed[0] : null;
+                              } else if (Array.isArray(imageData) && imageData.length > 0) {
+                                imageUrl = typeof imageData[0] === 'string' ? imageData[0] : imageData[0]?.url;
+                              }
+                              return imageUrl ? (
+                                <img src={imageUrl} alt={item.product.name} className="w-full h-full object-cover rounded-lg" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="text-gray-400" /></div>
+                              );
+                            } catch (e) {
+                              return (
+                                <div className="w-full h-full flex items-center justify-center"><ShoppingBag className="text-gray-400" /></div>
+                              );
+                            }
+                          })()}
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between mb-2">

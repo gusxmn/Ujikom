@@ -53,7 +53,7 @@ export const TabsTrigger = ({ value, children, className = '' }: TabsTriggerProp
       className={`px-4 py-3 font-medium text-sm border-b-2 transition ${
         isActive
           ? 'border-blue-600 text-blue-600'
-          : 'border-transparent text-gray-600 hover:text-gray-900'
+          : 'border-transparent text-gray-900 hover:text-blue-600'
       } ${className}`}
     >
       {children}

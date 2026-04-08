@@ -26,7 +26,7 @@ export class UploadController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: diskStorage({
-        destination: join(__dirname, '..', '..', '..', 'uploads'),
+        destination: join(process.cwd(), 'uploads'),
         filename: (req, file, cb) => {
           const randomName = Array(32)
             .fill(null)

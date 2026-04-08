@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import ProtectedRoute from '@/lib/components/ProtectedRoute';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Button } from '@/lib/components/ui/Button';
@@ -105,14 +106,15 @@ export default function OrderHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
             <ShoppingBag size={32} /> Order History
           </h1>
-          <p className="text-gray-600 mt-2">View and manage all your orders</p>
+          <p className="text-gray-900 mt-2">View and manage all your orders</p>
         </div>
 
         {/* Search and Filter */}
@@ -131,7 +133,7 @@ export default function OrderHistoryPage() {
           <select
             value={selectedStatus}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedStatus(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg bg-white"
+            className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-gray-900"
           >
             {statusOptions.map(option => (
               <option key={option.value} value={option.value}>{option.label}</option>
@@ -152,25 +154,25 @@ export default function OrderHistoryPage() {
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                       {/* Order Info */}
                       <div>
-                        <p className="text-sm text-gray-600">Order ID</p>
+                        <p className="text-sm text-gray-900">Order ID</p>
                         <p className="font-semibold text-gray-900">#{order.id}</p>
                       </div>
 
                       {/* Date */}
                       <div>
-                        <p className="text-sm text-gray-600">Order Date</p>
+                        <p className="text-sm text-gray-900">Order Date</p>
                         <p className="font-semibold text-gray-900">{formatDate(order.createdAt)}</p>
                       </div>
 
                       {/* Total */}
                       <div>
-                        <p className="text-sm text-gray-600">Total Amount</p>
+                        <p className="text-sm text-gray-900">Total Amount</p>
                         <p className="font-semibold text-blue-600">{formatPrice(order.total)}</p>
                       </div>
 
                       {/* Status */}
                       <div>
-                        <p className="text-sm text-gray-600">Status</p>
+                        <p className="text-sm text-gray-900">Status</p>
                         <div className="flex items-center gap-2 mt-1">
                           <StatusIcon
                             size={16}
@@ -188,12 +190,12 @@ export default function OrderHistoryPage() {
                       <p className="text-sm font-medium text-gray-900 mb-2">Items</p>
                       <div className="space-y-1">
                         {order.items?.slice(0, 2).map((item: any, index: number) => (
-                          <p key={index} className="text-sm text-gray-600">
+                          <p key={index} className="text-sm text-gray-900">
                             {item.productName} × {item.quantity}
                           </p>
                         ))}
                         {order.items?.length > 2 && (
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-900">
                             +{order.items.length - 2} more item{order.items.length - 2 > 1 ? 's' : ''}
                           </p>
                         )}
@@ -263,15 +265,18 @@ export default function OrderHistoryPage() {
           <Card>
             <CardContent className="p-12 text-center">
               <ShoppingBag size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600 text-lg mb-4">No orders found</p>
-              <p className="text-gray-500 mb-6">You haven't placed any orders yet</p>
-              <Link href="/products">
-                <Button>Start Shopping</Button>
-              </Link>
+              <p className="text-gray-900 text-lg mb-4">No orders found</p>
+              <p className="text-gray-900 mb-6">You haven't placed any orders yet</p>
+              <div className="flex justify-center">
+                <Link href="/products">
+                  <Button>Start Shopping</Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         )}
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

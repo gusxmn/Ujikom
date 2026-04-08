@@ -3,6 +3,9 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/contexts/AuthContext'
 import { QueryProvider } from '@/lib/components/providers/QueryProvider'
+import { LoadingProvider } from '@/lib/contexts/LoadingContext'
+import LoadingScreen from '@/lib/components/LoadingScreen'
+import RouteChangeListener from '@/lib/components/RouteChangeListener'
 import { Toaster } from 'react-hot-toast'
 import Navbar from '@/lib/components/layout/Navbar'
 
@@ -21,26 +24,30 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <QueryProvider>
-          <AuthProvider>
-            <div className="min-h-screen bg-gray-50">
-              <Navbar />
-              <main className="pt-16">
-                {children}
-              </main>
-              <Toaster 
-                position="top-right"
-                toastOptions={{
-                  duration: 3000,
-                  style: {
-                    background: '#363636',
-                    color: '#fff',
-                  },
-                }}
-              />
-            </div>
-          </AuthProvider>
-        </QueryProvider>
+        <LoadingProvider>
+          <RouteChangeListener />
+          <QueryProvider>
+            <AuthProvider>
+              <LoadingScreen />
+              <div className="min-h-screen bg-gray-50">
+                <Navbar />
+                <main className="pt-16">
+                  {children}
+                </main>
+                <Toaster 
+                  position="top-right"
+                  toastOptions={{
+                    duration: 3000,
+                    style: {
+                      background: '#363636',
+                      color: '#fff',
+                    },
+                  }}
+                />
+              </div>
+            </AuthProvider>
+          </QueryProvider>
+        </LoadingProvider>
       </body>
     </html>
   )

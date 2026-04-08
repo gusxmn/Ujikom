@@ -65,7 +65,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
 
       {/* Logout Confirmation Modal - Rendered at Top Level */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-[999]">
+        <div className="fixed inset-0 bg-white/10 backdrop-blur-md flex items-center justify-center z-[999]">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4">
             <h2 className="text-lg font-bold text-black mb-2">Confirm Logout</h2>
             <p className="text-gray-700 mb-6">Are you sure you want to log out?</p>

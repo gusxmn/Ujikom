@@ -22,7 +22,7 @@ import {
   Check,
   X
 } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getFirstImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -355,9 +355,9 @@ export default function WishlistPage() {
                     <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
                       <Link href={`/products/${product.slug}`}>
                         <div className="w-full h-full">
-                          {product.images?.[0] ? (
+                          {getFirstImageUrl(product.images) ? (
                             <Image
-                              src={product.images[0]}
+                              src={getFirstImageUrl(product.images)!}
                               alt={product.name}
                               fill
                               className="object-cover group-hover:scale-105 transition-transform"

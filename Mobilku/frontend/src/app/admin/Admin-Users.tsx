@@ -13,7 +13,7 @@ import {
   Shield,
   User,
 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -33,6 +33,7 @@ export default function AdminUsers() {
   const [filterRole, setFilterRole] = useState<'all' | 'ADMIN' | 'CUSTOMER'>('all');
   const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', phone: '' });
+  const [deleteConfirm, setDeleteConfirm] = useState<{ userId: number; userName: string } | null>(null);
 
   // Fetch users
   const { data: users, isLoading, error, refetch } = useQuery({
@@ -45,6 +46,7 @@ export default function AdminUsers() {
             limit: 100,
             search: searchTerm || undefined,
             role: filterRole !== 'all' ? filterRole : undefined,
+            active: true,
           },
         });
         console.log('Users response:', response.data);
@@ -113,9 +115,14 @@ export default function AdminUsers() {
     },
   });
 
-  const handleDeleteUser = (userId: number) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      deleteUserMutation.mutate(userId);
+  const handleDeleteUser = (userId: number, userName: string) => {
+    setDeleteConfirm({ userId, userName });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirm) {
+      deleteUserMutation.mutate(deleteConfirm.userId);
+      setDeleteConfirm(null);
     }
   };
 
@@ -278,7 +285,7 @@ export default function AdminUsers() {
                       <Shield size={18} className="text-black" />
                     </button>
                     <button
-                      onClick={() => handleDeleteUser(user.id)}
+                      onClick={() => handleDeleteUser(user.id, user.name)}
                       className="p-2 rounded-lg hover:bg-red-100 transition"
                       title="Delete user"
                     >
@@ -290,7 +297,7 @@ export default function AdminUsers() {
                 {/* Metadata */}
                 <div className="mt-3 pt-3 border-t border-slate-200 text-xs text-slate-500 flex justify-between">
                   <span>Joined: {formatDate(user.createdAt)}</span>
-                  <span>Last updated: {formatDate(user.updatedAt)}</span>
+                  <span>Last updated: {formatDateTime(user.updatedAt)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -308,7 +315,7 @@ export default function AdminUsers() {
 
       {/* Edit Modal */}
       {editingUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[999] p-4">
           <Card className="w-full max-w-md">
             <CardHeader>
               <CardTitle className="text-black">Edit User</CardTitle>
@@ -360,6 +367,40 @@ export default function AdminUsers() {
                   className="flex-1 bg-gray-300 text-black px-4 py-2 rounded-lg hover:bg-gray-400 transition"
                 >
                   Cancel
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[999] p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-red-600">Delete User</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-gray-700">
+                Are you sure you want to delete <span className="font-semibold">{deleteConfirm.userName}</span>?
+              </p>
+              <p className="text-sm text-gray-500">
+                This action cannot be undone. All associated data will be removed.
+              </p>
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleteUserMutation.isPending}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 font-medium transition"
+                >
+                  {deleteUserMutation.isPending ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </CardContent>

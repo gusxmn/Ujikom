@@ -23,7 +23,7 @@ import {
   Star,
   Clock
 } from 'lucide-react';
-import { formatPrice, formatNumber, formatDate } from '@/lib/utils';
+import { formatPrice, formatNumber, formatDate, getFirstImageUrl } from '@/lib/utils';
 import { CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -532,9 +532,9 @@ export default function AdminDashboard() {
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden">
-                            {product.images?.[0] && (
+                            {getFirstImageUrl(product.images) && (
                               <img
-                                src={product.images[0]}
+                                src={getFirstImageUrl(product.images)!}
                                 alt={product.name}
                                 className="w-full h-full object-cover"
                               />

@@ -3,26 +3,22 @@
 import { useAuth } from '@/lib/contexts/AuthContext'
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Car, Shield, CreditCard, Truck, ChevronRight, Star } from 'lucide-react'
 import ProductCard from '@/lib/components/products/ProductCard'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import Link from 'next/link'
+import { getFirstImageUrl } from '@/lib/utils'
 
 export default function HomePage() {
   const { user, isLoading } = useAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!isLoading && user && user.role === 'ADMIN') {
       // Redirect admin to dashboard
-      if (user && user.role === 'ADMIN') {
-        router.push('/admin')
-      }
-      // Redirect non-authenticated users to login
-      if (!user) {
-        router.push('/login')
-      }
+      router.push('/admin')
     }
   }, [user, isLoading, router])
 
@@ -55,38 +51,23 @@ export default function HomePage() {
     )
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-900">Redirecting to login...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen">
       {/* Hero Section - Premium Design */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 text-white py-32">
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -right-20 -top-20 w-96 h-96 bg-blue-600 rounded-full opacity-20 blur-3xl"></div>
-          <div className="absolute -left-20 -bottom-20 w-96 h-96 bg-blue-500 rounded-full opacity-20 blur-3xl"></div>
-        </div>
-        
+      <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 to-blue-900 text-white py-20 lg:py-32">
         <div className="container mx-auto px-4 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             {/* Left Content */}
             <div>
               <div className="mb-4 inline-block">
-                <span className="bg-blue-500/20 text-blue-100 px-4 py-2 rounded-full text-sm font-semibold border border-blue-500/50">
+                <span className="bg-blue-600/30 text-blue-200 px-4 py-2 rounded-full text-sm font-semibold border border-blue-500">
                   Mobilku - Temukan Mobil Impian Anda
                 </span>
               </div>
-              <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
-                Temukan Mobil <span className="text-blue-400">Impian Anda</span>
+              <h1 className="text-4xl md:text-6xl font-black mb-6 leading-tight">
+                Temukan Mobil <span className="text-blue-300">Impian Anda</span>
               </h1>
-              <p className="text-xl text-blue-100 mb-8 leading-relaxed">
+              <p className="text-lg text-gray-300 mb-8 leading-relaxed">
                 Mobil baru & bekas berkualitas dengan harga terbaik. Berbagai pilihan dari berbagai merek terkemuka dengan garansi dan inspeksi menyeluruh
               </p>
               <div className="flex gap-4 flex-col sm:flex-row">
@@ -105,11 +86,17 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right - Car Image Placeholder */}
-            <div className="relative hidden lg:block">
-              <div className="absolute inset-0 bg-gradient-to-b from-blue-400/20 to-transparent rounded-3xl"></div>
-              <div className="h-96 bg-gradient-to-br from-blue-400 to-blue-600 rounded-3xl flex items-center justify-center shadow-2xl">
-                <Car className="w-48 h-48 text-white/50" />
+            {/* Right - Car Image Container */}
+            <div className="hidden lg:flex items-center justify-center">
+              <div className="w-full h-96 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center shadow-2xl overflow-hidden border-4 border-blue-400">
+                <Image
+                  src="/images/car.png"
+                  alt="Luxury Car"
+                  width={400}
+                  height={320}
+                  className="object-contain"
+                  priority
+                />
               </div>
             </div>
           </div>
@@ -194,7 +181,7 @@ export default function HomePage() {
                   name={product.name}
                   slug={product.slug}
                   price={product.price}
-                  image={product.image}
+                  image={getFirstImageUrl(product.images) || undefined}
                   rating={product.rating}
                   reviews={product.reviews}
                   stock={product.stock}

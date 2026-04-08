@@ -52,7 +52,7 @@ import {
   SortDesc,
   Loader2,
 } from 'lucide-react';
-import { formatPrice, formatDate } from '@/lib/utils';
+import { formatPrice, formatDate, getFirstImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 export default function AdminProductsPage() {
@@ -442,9 +442,9 @@ export default function AdminProductsPage() {
                       <TableRow key={product.id} className="hover:bg-gray-50">
                         <TableCell>
                           <div className="w-12 h-12 bg-gray-100 rounded overflow-hidden">
-                            {product.images?.[0] ? (
+                            {getFirstImageUrl(product.images) ? (
                               <img
-                                src={product.images[0]}
+                                src={getFirstImageUrl(product.images)!}
                                 alt={product.name}
                                 className="w-full h-full object-cover"
                               />

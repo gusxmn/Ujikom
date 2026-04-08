@@ -12,6 +12,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [testLinks, setTestLinks] = useState<{ testResetUrl?: string; previewUrl?: string } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,8 +24,8 @@ export default function ForgotPasswordPage() {
 
     setIsLoading(true);
     try {
-      // Note: You'll need to implement this endpoint in your backend
-      await api.post('/auth/forgot-password', { email });
+      const response = await api.post('/auth/forgot-password', { email });
+      setTestLinks(response.data); // Store test links if available
       setIsSubmitted(true);
       toast.success('Check your email for password reset link');
     } catch (error: any) {
@@ -115,11 +116,47 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
 
+              {/* For Testing Only - Show test links in development */}
+              {testLinks?.testResetUrl && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6 text-left">
+                  <p className="text-sm font-semibold text-gray-900 mb-2">🧪 Development Testing Links:</p>
+                  <div className="space-y-2">
+                    {testLinks.testResetUrl && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Reset Password Link:</p>
+                        <a
+                          href={testLinks.testResetUrl}
+                          className="text-xs text-blue-600 hover:text-blue-700 underline break-all block bg-white p-2 rounded border border-gray-200"
+                        >
+                          Click here to reset password
+                        </a>
+                      </div>
+                    )}
+                    {testLinks.previewUrl && (
+                      <div>
+                        <p className="text-xs text-gray-600 mb-1">Email Preview:</p>
+                        <a
+                          href={testLinks.previewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-700 underline block bg-white p-2 rounded border border-gray-200"
+                        >
+                          👁️ View email preview (opens in new tab)
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-3">
                 <p className="text-sm text-gray-600">
                   Didn't receive the email?{' '}
                   <button
-                    onClick={() => setIsSubmitted(false)}
+                    onClick={() => {
+                      setIsSubmitted(false);
+                      setTestLinks(null);
+                    }}
                     className="text-blue-600 hover:text-blue-700 font-medium transition"
                   >
                     Try again

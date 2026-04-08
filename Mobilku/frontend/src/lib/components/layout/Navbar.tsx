@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Car, LogOut, User, ShoppingCart, Heart } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -32,9 +33,15 @@ export default function Navbar() {
     return (
       <nav className="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center">
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl text-blue-600">
-            <Car className="w-6 h-6" />
-            Mobilku
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/images/logo.png"
+              alt="Mobilku Logo"
+              width={140}
+              height={40}
+              className="object-contain"
+              priority
+            />
           </Link>
         </div>
       </nav>
@@ -45,9 +52,15 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 bg-white shadow-md z-50">
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-blue-600">
-          <Car className="w-6 h-6" />
-          Mobilku
+        <Link href="/" className="flex items-center gap-2">
+          <Image
+            src="/images/logo.png"
+            alt="Mobilku Logo"
+            width={140}
+            height={40}
+            className="object-contain"
+            priority
+          />
         </Link>
 
         {/* Navigation Links */}
@@ -135,7 +148,7 @@ export default function Navbar() {
 
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-[999]">
+        <div className="fixed inset-0 bg-white/10 backdrop-blur-md flex items-center justify-center z-[999]">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4">
             <h2 className="text-lg font-bold text-black mb-2">Confirm Logout</h2>
             <p className="text-gray-700 mb-6">Are you sure you want to log out?</p>

@@ -11,6 +11,7 @@ import { Input } from '@/lib/components/ui/Input';
 import { ShoppingCart, Heart, Star, Search, Filter, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { getFirstImageUrl } from '@/lib/utils';
 
 export default function ProductsPage() {
   const { user } = useAuth();
@@ -148,9 +149,9 @@ export default function ProductsPage() {
                   <Link key={product.id} href={`/products/${product.slug}`}>
                     <Card className="hover:shadow-lg transition h-full">
                       <div className="h-48 bg-gray-200 rounded-t-lg overflow-hidden">
-                        {product.image ? (
+                        {product.image || getFirstImageUrl(product.images) ? (
                           <img
-                            src={product.image}
+                            src={product.image || getFirstImageUrl(product.images)!}
                             alt={product.name}
                             className="w-full h-full object-cover"
                           />

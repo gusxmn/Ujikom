@@ -1,6 +1,7 @@
 'use client';
 
 import { use } from 'react';
+import ProtectedRoute from '@/lib/components/ProtectedRoute';
 import AdminLayout from '@/lib/components/layout/AdminLayout';
 import ProductForm from '../../../ProductForm';
 
@@ -16,17 +17,21 @@ export default function EditProductPage({ params }: EditProductPageProps) {
 
   if (isNaN(productId)) {
     return (
-      <AdminLayout>
-        <div className="text-center py-12">
-          <p className="text-slate-600">Invalid product ID</p>
-        </div>
-      </AdminLayout>
+      <ProtectedRoute requiredRole="ADMIN">
+        <AdminLayout>
+          <div className="text-center py-12">
+            <p className="text-slate-600">Invalid product ID</p>
+          </div>
+        </AdminLayout>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <AdminLayout>
-      <ProductForm mode="edit" productId={productId} />
-    </AdminLayout>
+    <ProtectedRoute requiredRole="ADMIN">
+      <AdminLayout>
+        <ProductForm mode="edit" productId={productId} />
+      </AdminLayout>
+    </ProtectedRoute>
   );
 }

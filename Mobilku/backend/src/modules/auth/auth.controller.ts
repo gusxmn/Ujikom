@@ -42,4 +42,20 @@ export class AuthController {
   async getProfile(@Request() req) {
     return this.authService.getProfile(req.user.sub);
   }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Request password reset link' })
+  @ApiResponse({ status: 200, description: 'Password reset link sent to email' })
+  @ApiResponse({ status: 400, description: 'Invalid email' })
+  async forgotPassword(@Body() body: { email: string }) {
+    return this.authService.forgotPassword(body.email);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password with token' })
+  @ApiResponse({ status: 200, description: 'Password reset successful' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired token' })
+  async resetPassword(@Body() body: { token: string; newPassword: string }) {
+    return this.authService.resetPassword(body.token, body.newPassword);
+  }
 }

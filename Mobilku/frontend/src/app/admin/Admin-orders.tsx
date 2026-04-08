@@ -50,7 +50,7 @@ import {
   SortAsc,
   SortDesc
 } from 'lucide-react';
-import { formatPrice, formatDate } from '@/lib/utils';
+import { formatPrice, formatDate, getFirstImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -433,9 +433,9 @@ export default function AdminOrdersPage() {
                                   key={index}
                                   className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 overflow-hidden"
                                 >
-                                  {item.product.images?.[0] ? (
+                                  {getFirstImageUrl(item.product.images) ? (
                                     <img
-                                      src={item.product.images[0]}
+                                      src={getFirstImageUrl(item.product.images)!}
                                       alt={item.product.name}
                                       className="w-full h-full object-cover"
                                     />

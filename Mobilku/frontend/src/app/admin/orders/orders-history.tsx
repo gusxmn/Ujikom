@@ -25,7 +25,7 @@ import {
   Star,
   ArrowRight
 } from 'lucide-react';
-import { formatPrice, formatDate } from '@/lib/utils';
+import { formatPrice, formatDate, getFirstImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -184,7 +184,7 @@ export default function OrdersPage() {
                 <div className="text-2xl font-bold text-gray-900">
                   {count}
                 </div>
-                <div className="text-sm text-gray-600 capitalize mt-1">
+                <div className="text-sm text-gray-900 capitalize mt-1">
                   {status === 'all' ? 'All Orders' : status}
                 </div>
               </CardContent>
@@ -282,9 +282,9 @@ export default function OrdersPage() {
                     {order.items.slice(0, 3).map((item: any) => (
                       <div key={item.id} className="flex items-center gap-4">
                         <div className="w-20 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
-                          {item.product.images?.[0] ? (
+                          {getFirstImageUrl(item.product.images) ? (
                             <img
-                              src={item.product.images[0]}
+                              src={getFirstImageUrl(item.product.images)!}
                               alt={item.product.name}
                               className="w-full h-full object-cover"
                             />
@@ -393,12 +393,14 @@ export default function OrdersPage() {
                   ? "You haven't placed any orders yet. Start shopping to see your orders here."
                   : `You don't have any ${activeTab} orders at the moment.`}
               </p>
-              <Link href="/products">
-                <Button variant="primary" className="gap-2">
-                  <ArrowRight className="w-5 h-5" />
-                  Start Shopping
-                </Button>
-              </Link>
+              <div className="flex justify-center">
+                <Link href="/products">
+                  <Button variant="primary" className="gap-2">
+                    <ArrowRight className="w-5 h-5" />
+                    Start Shopping
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         )}
