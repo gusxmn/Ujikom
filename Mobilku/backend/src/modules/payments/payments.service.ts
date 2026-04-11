@@ -203,4 +203,87 @@ export class PaymentsService {
       },
     });
   }
+
+  /**
+   * Update payment by Xendit ID (called from webhook)
+   */
+  async updatePaymentByXenditId(xenditId: string, data: any) {
+    return this.prisma.payment.update({
+      where: { xenditId },
+      data: {
+        status: data.status,
+        paidAt: data.paidAt,
+        metadata: data.metadata,
+      },
+    });
+  }
+
+  /**
+   * Get payment by order ID
+   */
+  async getPaymentByOrderId(orderId: number) {
+    const payment = await this.prisma.payment.findFirst({
+      where: { orderId },
+    });
+    
+    if (payment) {
+      console.log(`✅ [Payment Service] Found payment for order ${orderId}:`, {
+        id: payment.id,
+        orderId: payment.orderId,
+        status: payment.status,
+        amount: payment.amount,
+      });
+    } else {
+      console.warn(`⚠️ [Payment Service] No payment found for order ${orderId}`);
+    }
+    
+    return payment;
+  }
+
+  /**
+   * Update payment status by order ID
+   * Used for testing and admin functions
+   */
+  async updatePaymentStatusByOrderId(orderId: number, status: string) {
+    console.log(`📝 [Payment Service] Updating payment status for order ${orderId} to: ${status}`);
+    
+    const payment = await this.prisma.payment.updateMany({
+      where: { orderId },
+      data: {
+        status: status as any,
+        paidAt: status === 'PAID' ? new Date() : null,
+      },
+    });
+
+    console.log(`✅ [Payment Service] Payment status updated:`, {
+      orderId,
+      status,
+      updatedCount: payment.count,
+    });
+
+    return payment;
+  }
+
+  /**
+   * Confirm payment for an order (simulate successful payment)
+   */
+  async confirmPayment(orderId: number) {
+    console.log(`💰 [Payment Service] Confirming payment for order ${orderId}`);
+    
+    const payment = await this.prisma.payment.updateMany({
+      where: { orderId },
+      data: {
+        status: 'PAID',
+        paidAt: new Date(),
+      },
+    });
+
+    if (payment.count === 0) {
+      console.warn(`⚠️ [Payment Service] No payment found to confirm for order ${orderId}`);
+      throw new Error(`Payment not found for order ${orderId}`);
+    }
+
+    console.log(`✅ [Payment Service] Payment confirmed for order ${orderId}`);
+    return payment;
+  }
 }

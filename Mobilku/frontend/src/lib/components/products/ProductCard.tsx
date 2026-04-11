@@ -5,6 +5,7 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { api } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
+import { buildImageUrl } from '@/lib/utils';
 
 interface ProductCardProps {
   id: string;
@@ -30,14 +31,24 @@ export default function ProductCard({
   const router = useRouter();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  
+  // Build proper image URL with backend base URL if needed
+  const imageUrl = image ? buildImageUrl(image) : null;
 
   const handleAddToCart = async () => {
     setIsLoading(true);
     try {
-      // Add to cart logic here
+      await api.post('/cart/add', { 
+        productId: parseInt(id, 10),
+        quantity: 1 
+      });
       toast.success('Added to cart!');
-    } catch (error) {
-      toast.error('Failed to add to cart');
+      // Refresh cart query
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Failed to add to cart';
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -61,11 +72,18 @@ export default function ProductCard({
       <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition group cursor-pointer">
         {/* Product Image */}
         <div className="relative w-full h-48 bg-gray-200 overflow-hidden">
-          {image ? (
+          {imageUrl && !imageError ? (
             <img
-              src={image}
+              src={imageUrl}
               alt={name}
               className="w-full h-full object-cover group-hover:scale-105 transition"
+              onError={() => {
+                console.error('Failed to load image:', imageUrl);
+                setImageError(true);
+              }}
+              onLoad={() => {
+                console.log('Image loaded successfully:', imageUrl);
+              }}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-300">

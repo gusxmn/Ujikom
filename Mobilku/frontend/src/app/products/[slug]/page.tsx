@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/Ca
 import { AlertCircle, CheckCircle2, Star, User, Heart, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { buildImageUrl } from '@/lib/utils';
 
 interface Review {
   id: number;
@@ -151,36 +152,20 @@ export default function ProductDetailPage() {
     
     setIsBuyLoading(true);
     try {
-      // Get or create cart from localStorage
-      const existingCart = localStorage.getItem('cart');
-      let cartData = [];
-      
-      if (existingCart) {
-        try {
-          cartData = JSON.parse(existingCart);
-        } catch (e) {
-          console.error('Failed to parse cart:', e);
-          cartData = [];
-        }
-      }
-      
-      // Add product to cart
-      cartData.push({
+      // Add to cart via API
+      await api.post('/cart/add', { 
         productId: product.id,
-        quantity: quantity,
-        price: product.price,
+        quantity: quantity 
       });
-      
-      // Save cart to localStorage
-      localStorage.setItem('cart', JSON.stringify(cartData));
       
       toast.success(`${quantity} unit(s) added to cart`);
       
-      // Redirect to checkout immediately
-      router.push('/checkout');
-    } catch (error) {
-      console.error('Failed to add to cart:', error);
-      toast.error('Failed to add to cart');
+      // Redirect to cart page
+      router.push('/cart');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Failed to add to cart';
+      toast.error(errorMessage);
+    } finally {
       setIsBuyLoading(false);
     }
   };
@@ -213,9 +198,9 @@ export default function ProductDetailPage() {
   try {
     if (typeof product.images === 'string') {
       const parsed = JSON.parse(product.images);
-      images = Array.isArray(parsed) ? parsed.map((img: any) => img.url || img) : [];
+      images = Array.isArray(parsed) ? parsed.map((img: any) => buildImageUrl(img.url || img)) : [];
     } else if (Array.isArray(product.images)) {
-      images = product.images.map((img: any) => typeof img === 'string' ? img : img.url);
+      images = product.images.map((img: any) => buildImageUrl(typeof img === 'string' ? img : img.url));
     }
   } catch (e) {
     console.error('Failed to parse images:', e);

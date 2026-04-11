@@ -53,9 +53,11 @@ export class CouponsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async findAll(
     @Query('active') active?: string,
-    @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
   ) {
+    const page = pageStr ? parseInt(pageStr, 10) : 1;
+    const limit = limitStr ? parseInt(limitStr, 10) : 10;
     const isActive = active === 'true' ? true : active === 'false' ? false : undefined;
     return this.couponsService.findAll(isActive, page, limit);
   }

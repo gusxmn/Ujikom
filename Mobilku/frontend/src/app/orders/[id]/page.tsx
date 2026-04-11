@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { Button } from '@/lib/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/Card';
@@ -19,7 +20,7 @@ import {
   RotateCw,
   X,
 } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, getFirstImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -27,10 +28,14 @@ import Link from 'next/link';
 interface OrderItem {
   id: number;
   productId: number;
-  productName: string;
-  productImage: string;
   quantity: number;
   price: number;
+  product: {
+    id: number;
+    name: string;
+    images: string | any[];
+    slug: string;
+  };
 }
 
 interface Order {
@@ -40,8 +45,12 @@ interface Order {
   createdAt: string;
   updatedAt: string;
   total: number;
+  totalAmount: number;
   subtotal: number;
   shippingCost: number;
+  discount: number;
+  couponCode?: string;
+  couponId?: number;
   shippingMethod: string;
   paymentMethod: string;
   items: OrderItem[];
@@ -101,6 +110,7 @@ const STATUS_CONFIG = {
 export default function OrderDetailPage() {
   const params = useParams();
   const orderId = params.id as string;
+  const [paymentStatus, setPaymentStatus] = useState<string>('PENDING');
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', orderId],
@@ -109,6 +119,22 @@ export default function OrderDetailPage() {
       return response.data as Order;
     },
   });
+
+  // Fetch payment status
+  useEffect(() => {
+    if (orderId) {
+      api
+        .get(`/payments/status/${orderId}`)
+        .then((res) => {
+          if (res.data.found) {
+            setPaymentStatus(res.data.status);
+          }
+        })
+        .catch((err) => {
+          console.log('Payment status fetch error:', err);
+        });
+    }
+  }, [orderId]);
 
   const handleDownloadInvoice = async () => {
     try {
@@ -129,12 +155,21 @@ export default function OrderDetailPage() {
   };
 
   const handleCancelOrder = async () => {
-    if (!window.confirm('Are you sure you want to cancel this order?')) return;
     try {
+      const result = await new Promise<boolean>((resolve) => {
+        const confirmed = window.confirm(
+          '⚠️ Yakin ingin membatalkan pesanan ini?\n\nPembatalan tidak dapat dibatalkan kembali.',
+        );
+        resolve(confirmed);
+      });
+
+      if (!result) return;
+
       await api.post(`/orders/${orderId}/cancel`);
-      toast.success('Order cancelled successfully');
+      toast.success('✅ Pesanan berhasil dibatalkan');
+      window.location.reload();
     } catch (error) {
-      toast.error('Failed to cancel order');
+      toast.error('❌ Gagal membatalkan pesanan');
     }
   };
 
@@ -180,9 +215,9 @@ export default function OrderDetailPage() {
     );
   }
 
-  const timeline = STATUS_TIMELINE[order.status];
-  const statusConfig = STATUS_CONFIG[order.status];
-  const StatusIcon = statusConfig.icon;
+  const timeline = STATUS_TIMELINE[order.status] || STATUS_TIMELINE.pending;
+  const statusConfig = STATUS_CONFIG[order.status] || STATUS_CONFIG.pending;
+  const StatusIcon = statusConfig?.icon || Clock;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 mt-20">
@@ -263,7 +298,7 @@ export default function OrderDetailPage() {
           <div className="lg:col-span-2">
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Order Items</CardTitle>
+                <CardTitle>🛒 Order Items</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -271,18 +306,18 @@ export default function OrderDetailPage() {
                     <div key={item.id} className="flex gap-4 pb-4 border-b last:border-b-0">
                       <div className="relative w-20 h-20 bg-gray-100 rounded">
                         <Image
-                          src={item.productImage || '/placeholder.png'}
-                          alt={item.productName}
+                          src={getFirstImageUrl(item.product?.images) || '/placeholder.png'}
+                          alt={item.product?.name || 'Product image'}
                           fill
                           className="object-cover rounded"
                         />
                       </div>
                       <div className="flex-1">
                         <Link
-                          href={`/products/${item.productId}`}
+                          href={`/products/${item.product?.slug || item.productId}`}
                           className="font-semibold text-gray-900 hover:text-blue-600"
                         >
-                          {item.productName}
+                          {item.product?.name || 'Unknown product'}
                         </Link>
                         <p className="text-gray-600 text-sm">Qty: {item.quantity}</p>
                         <p className="font-semibold text-gray-900 mt-1">
@@ -298,28 +333,75 @@ export default function OrderDetailPage() {
             {/* Shipping Address */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin size={20} /> Shipping Address
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin size={20} /> 📬 Shipping Address
+                  </CardTitle>
+                  {paymentStatus === 'PAID' ? (
+                    <div className="text-xs text-red-600 font-semibold px-3 py-2 bg-red-50 rounded">
+                      🔒 Sudah dibayar (Tidak bisa edit)
+                    </div>
+                  ) : (
+                    <Link href="/checkout">
+                      <Button variant="outline" size="sm" className="gap-2">
+                        ✏️ Edit Address
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
-                <p className="font-semibold text-gray-900">{order.shippingAddress.name}</p>
-                <p className="text-gray-600 text-sm mt-2">{order.shippingAddress.street}</p>
-                <p className="text-gray-600 text-sm">
-                  {order.shippingAddress.city}, {order.shippingAddress.province}{' '}
-                  {order.shippingAddress.zipCode}
-                </p>
-                <p className="text-gray-600 text-sm">{order.shippingAddress.country}</p>
-                <div className="mt-4 space-y-1 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Phone size={16} className="text-gray-500" />
-                    {order.shippingAddress.phone}
+                {order.shippingAddress ? (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium mb-1">Recipient Name</p>
+                      <p className="font-semibold text-gray-900">{order.shippingAddress.name || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 font-medium mb-1">Street Address</p>
+                      <p className="text-gray-700">{order.shippingAddress.street || '-'}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium mb-1">City</p>
+                        <p className="text-gray-700">{order.shippingAddress.city || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium mb-1">Province</p>
+                        <p className="text-gray-700">{order.shippingAddress.province || '-'}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium mb-1">ZIP Code</p>
+                        <p className="text-gray-700">{order.shippingAddress.zipCode || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 font-medium mb-1">Country</p>
+                        <p className="text-gray-700">{order.shippingAddress.country || '-'}</p>
+                      </div>
+                    </div>
+                    <hr className="my-3" />
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <Phone size={16} className="text-blue-600 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">Phone</p>
+                          <p className="text-gray-900">{order.shippingAddress.phone || '-'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Mail size={16} className="text-blue-600 flex-shrink-0" />
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">Email</p>
+                          <p className="text-gray-900">{order.shippingAddress.email || '-'}</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Mail size={16} className="text-gray-500" />
-                    {order.shippingAddress.email}
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">No shipping address available</p>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -329,21 +411,30 @@ export default function OrderDetailPage() {
             {/* Order Summary */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+                <CardTitle>📋 Order Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex justify-between">
-                  <p className="text-gray-600">Subtotal</p>
-                  <p className="font-semibold">{formatPrice(order.subtotal)}</p>
+                <div className="flex justify-between items-center">
+                  <p className="text-gray-600 font-medium">Subtotal</p>
+                  <p className="font-semibold text-gray-900">{formatPrice(order.subtotal || 0)}</p>
                 </div>
-                <div className="flex justify-between">
-                  <p className="text-gray-600">Shipping</p>
-                  <p className="font-semibold">{formatPrice(order.shippingCost)}</p>
+                <div className="flex justify-between items-center">
+                  <p className="text-gray-600 font-medium">Shipping</p>
+                  <p className="font-semibold text-gray-900">{formatPrice(order.shippingCost || 0)}</p>
                 </div>
-                <hr />
-                <div className="flex justify-between">
+                {order.discount > 0 && (
+                  <div className="flex justify-between items-center text-green-600">
+                    <div className="flex flex-col">
+                      <p className="text-sm font-medium">Discount</p>
+                      {order.couponCode && <p className="text-xs text-green-600">({order.couponCode})</p>}
+                    </div>
+                    <p className="font-semibold">-{formatPrice(order.discount)}</p>
+                  </div>
+                )}
+                <hr className="my-2" />
+                <div className="flex justify-between items-center">
                   <p className="font-semibold text-gray-900">Total</p>
-                  <p className="font-bold text-lg text-blue-600">{formatPrice(order.total)}</p>
+                  <p className="font-bold text-lg text-blue-600">{formatPrice(order.total || order.totalAmount)}</p>
                 </div>
               </CardContent>
             </Card>
@@ -351,62 +442,83 @@ export default function OrderDetailPage() {
             {/* Details */}
             <Card className="mb-6">
               <CardHeader>
-                <CardTitle>Details</CardTitle>
+                <CardTitle>📦 Details</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                <div>
-                  <p className="text-gray-600">Order Date</p>
-                  <p className="font-semibold text-gray-900">
-                    {new Date(order.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Shipping Method</p>
-                  <p className="font-semibold text-gray-900 capitalize">
-                    {order.shippingMethod}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-gray-600">Payment Method</p>
-                  <p className="font-semibold text-gray-900 capitalize">
-                    {order.paymentMethod}
-                  </p>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="pb-4 border-b last:border-b-0">
+                    <p className="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wider">Order Date</p>
+                    <p className="font-semibold text-gray-900">
+                      {new Date(order.createdAt).toLocaleDateString('id-ID', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}
+                    </p>
+                  </div>
+                  <div className="pb-4 border-b last:border-b-0">
+                    <p className="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wider">Shipping Method</p>
+                    <p className="font-semibold text-gray-900 capitalize">
+                      {order.shippingMethod || '-'}
+                    </p>
+                  </div>
+                  <div className="pb-4 border-b last:border-b-0">
+                    <p className="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wider">Payment Method</p>
+                    <p className="font-semibold text-gray-900 capitalize">
+                      {order.paymentMethod || '-'}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Actions */}
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {/* Primary Action Buttons */}
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadInvoice}
+                  className="flex items-center justify-center gap-2 h-11"
+                >
+                  <Download size={18} />
+                  <span className="hidden sm:inline">Invoice</span>
+                </Button>
+                {order.status === 'pending' || order.status === 'processing' ? (
+                  <Button
+                    variant="destructive"
+                    onClick={handleCancelOrder}
+                    className="flex items-center justify-center gap-2 h-11"
+                  >
+                    <X size={18} />
+                    <span className="hidden sm:inline">Cancel</span>
+                  </Button>
+                ) : order.status === 'delivered' ? (
+                  <Button
+                    onClick={handleReorder}
+                    className="flex items-center justify-center gap-2 h-11 bg-green-600 hover:bg-green-700"
+                  >
+                    <RotateCw size={18} />
+                    <span className="hidden sm:inline">Reorder</span>
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    disabled
+                    className="flex items-center justify-center gap-2 h-11"
+                  >
+                    <MessageSquare size={18} />
+                    <span className="hidden sm:inline">Support</span>
+                  </Button>
+                )}
+              </div>
+
+              {/* Secondary Action */}
               <Button
                 fullWidth
                 variant="outline"
-                onClick={handleDownloadInvoice}
-                className="flex items-center justify-center gap-2"
-              >
-                <Download size={18} /> Download Invoice
-              </Button>
-              {order.status === 'pending' || order.status === 'processing' ? (
-                <Button
-                  fullWidth
-                  variant="destructive"
-                  onClick={handleCancelOrder}
-                  className="flex items-center justify-center gap-2"
-                >
-                  <X size={18} /> Cancel Order
-                </Button>
-              ) : order.status === 'delivered' ? (
-                <Button
-                  fullWidth
-                  onClick={handleReorder}
-                  className="flex items-center justify-center gap-2"
-                >
-                  <RotateCw size={18} /> Reorder
-                </Button>
-              ) : null}
-              <Button
-                fullWidth
-                variant="outline"
-                className="flex items-center justify-center gap-2"
+                className="flex items-center justify-center gap-2 h-11"
               >
                 <MessageSquare size={18} /> Contact Support
               </Button>

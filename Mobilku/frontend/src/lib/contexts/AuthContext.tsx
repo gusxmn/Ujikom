@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
+import Cookies from 'js-cookie';
 
 interface User {
   id: string;
@@ -33,14 +34,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Check if user is already logged in
     const checkAuth = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('token') || Cookies.get('token');
       if (token) {
         try {
           api.defaults.headers.Authorization = `Bearer ${token}`;
           const response = await api.get('/auth/profile');
           setUser(response.data);
+          // Ensure token is in both storage locations
+          localStorage.setItem('token', token);
+          Cookies.set('token', token, { expires: 7 });
         } catch (error) {
           localStorage.removeItem('token');
+          Cookies.remove('token');
           setUser(null);
         }
       }
@@ -65,6 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('User role:', userData?.role);
       
       localStorage.setItem('token', finalToken);
+      Cookies.set('token', finalToken, { expires: 7 });
       api.defaults.headers.Authorization = `Bearer ${finalToken}`;
       
       // Update state first
@@ -102,6 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const finalToken = access_token || token;
       
       localStorage.setItem('token', finalToken);
+      Cookies.set('token', finalToken, { expires: 7 });
       api.defaults.headers.Authorization = `Bearer ${finalToken}`;
       setUser(userData);
       
@@ -116,6 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    Cookies.remove('token');
     delete api.defaults.headers.Authorization;
     setUser(null);
     toast.success('Logged out successfully');

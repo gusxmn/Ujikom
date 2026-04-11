@@ -7,8 +7,8 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 import { Button } from '@/lib/components/ui/Button';
 import { Input } from '@/lib/components/ui/Input';
 import { Card, CardContent } from '@/lib/components/ui/Card';
-import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, ShoppingBag, Truck, CreditCard, Check, X, AlertCircle } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
+import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, ShoppingBag, CreditCard, Check, X, AlertCircle } from 'lucide-react';
+import { formatPrice, buildImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -19,24 +19,24 @@ export default function CartPage() {
   const queryClient = useQueryClient();
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; itemId: number | null }>({
+    isOpen: false,
+    itemId: null,
+  });
 
-  const { data: cart, isLoading } = useQuery({
+  const { data: cart, isLoading, refetch: refetchCart } = useQuery({
     queryKey: ['cart'],
     queryFn: async () => {
       const response = await api.get('/cart');
+      console.log('🛒 Cart fetched:', response.data);
       return response.data;
     },
     enabled: !!user,
+    staleTime: 0, // Always refetch
+    refetchOnWindowFocus: true,
   });
 
-  const { data: addresses } = useQuery({
-    queryKey: ['shipping-addresses'],
-    queryFn: async () => {
-      const response = await api.get('/shipping-addresses');
-      return response.data;
-    },
-    enabled: !!user,
-  });
+
 
   const updateCartItemMutation = useMutation({
     mutationFn: ({ itemId, quantity }: { itemId: number; quantity: number }) =>
@@ -73,18 +73,48 @@ export default function CartPage() {
   });
 
   const validateCouponMutation = useMutation({
-    mutationFn: (code: string) =>
-      api.post('/coupons/validate', { 
-        code, 
-        totalAmount: cart?.items?.reduce((total: number, item: any) => 
-          total + (Number(item.product.price) * item.quantity), 0) || 0 
-      }),
+    mutationFn: (code: string) => {
+      if (!cart?.items || cart.items.length === 0) {
+        throw new Error('Keranjang belum ada produk');
+      }
+      
+      const totalAmount = cart.items.reduce((total: number, item: any) => {
+        const price = Number(item.product?.price) || Number(item.price) || 0;
+        const qty = Number(item.quantity) || 0;
+        const itemTotal = price * qty;
+        console.log(`Item: price=${price}, qty=${qty}, total=${itemTotal}`);
+        return total + itemTotal;
+      }, 0);
+      
+      console.log('Final Total Amount:', totalAmount);
+      console.log('Sending to backend:', { code, totalAmount });
+      
+      if (totalAmount <= 0) {
+        throw new Error('Total harga tidak valid');
+      }
+      
+      return api.post('/coupons/validate', { code, totalAmount });
+    },
     onSuccess: (response: any) => {
+      console.log('✅ Coupon Success Response:', response.data);
       setAppliedCoupon(response.data);
-      toast.success('Coupon applied successfully!');
+      
+      // Save coupon code to sessionStorage (temp storage for checkout process)
+      if (response.data?.code) {
+        sessionStorage.setItem('couponCode', response.data.code);
+        console.log('💾 Coupon code saved to sessionStorage');
+      }
+      
+      toast.success('Kupon berhasil digunakan!');
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Invalid coupon');
+      console.error('❌ Coupon Error Details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      const errorMsg = error.response?.data?.message || error.message || 'Kode kupon tidak valid';
+      toast.error(errorMsg);
     },
   });
 
@@ -94,8 +124,13 @@ export default function CartPage() {
   };
 
   const handleRemoveItem = (itemId: number) => {
-    if (confirm('Remove this item?')) {
-      removeItemMutation.mutate(itemId);
+    setDeleteConfirmation({ isOpen: true, itemId });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmation.itemId) {
+      removeItemMutation.mutate(deleteConfirmation.itemId);
+      setDeleteConfirmation({ isOpen: false, itemId: null });
     }
   };
 
@@ -110,16 +145,12 @@ export default function CartPage() {
   const handleRemoveCoupon = () => {
     setAppliedCoupon(null);
     setCouponCode('');
+    sessionStorage.removeItem('couponCode');
   };
 
   const handleCheckout = () => {
     if (!cart?.items?.length) {
       toast.error('Your cart is empty');
-      return;
-    }
-    if (!addresses?.length) {
-      toast.error('Please add a shipping address first');
-      router.push('/profile/addresses');
       return;
     }
     router.push('/checkout');
@@ -167,7 +198,7 @@ export default function CartPage() {
 
   const cartItems = cart?.items || [];
   const subtotal = cartItems.reduce((total: number, item: any) => 
-    total + (Number(item.product.price) * item.quantity), 0);
+    total + (Number(item.product?.price || item.price || 0) * (item.quantity || 0)), 0);
   const shippingFee = subtotal > 1000000 ? 0 : 50000;
   const discount = appliedCoupon?.discount || 0;
   const total = subtotal + shippingFee - discount;
@@ -206,7 +237,7 @@ export default function CartPage() {
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl shadow-lg border border-slate-100">
                 <div className="bg-blue-50 p-6 border-b border-slate-100 flex justify-between items-center">
-                  <h2 className="text-2xl font-bold">Items ({cartItems.length})</h2>
+                  <h2 className="text-2xl font-bold text-black">Items ({cartItems.length})</h2>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -230,10 +261,11 @@ export default function CartPage() {
                               const imageData = item.product.images;
                               if (typeof imageData === 'string') {
                                 const parsed = JSON.parse(imageData);
-                                imageUrl = Array.isArray(parsed) ? parsed[0]?.url || parsed[0] : null;
+                                imageUrl = Array.isArray(parsed) ? (parsed[0]?.url || parsed[0]) : null;
                               } else if (Array.isArray(imageData) && imageData.length > 0) {
                                 imageUrl = typeof imageData[0] === 'string' ? imageData[0] : imageData[0]?.url;
                               }
+                              imageUrl = buildImageUrl(imageUrl);
                               return imageUrl ? (
                                 <img src={imageUrl} alt={item.product.name} className="w-full h-full object-cover rounded-lg" />
                               ) : (
@@ -249,21 +281,21 @@ export default function CartPage() {
                         <div className="flex-1">
                           <div className="flex justify-between mb-2">
                             <div>
-                              <h3 className="font-bold text-lg">{item.product.name}</h3>
-                              <p className="text-sm text-gray-600">{item.product.category?.name}</p>
+                              <h3 className="font-bold text-lg text-black">{item.product.name}</h3>
+                              <p className="text-sm text-black">{item.product.category?.name}</p>
                             </div>
                             <p className="text-xl font-bold text-blue-600">{formatPrice(Number(item.product.price))}</p>
                           </div>
                           <div className="flex justify-between items-center gap-4">
                             <div className="flex items-center border rounded">
                               <Button size="sm" variant="ghost" onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)} disabled={item.quantity <= 1}><Minus className="w-4 h-4" /></Button>
-                              <span className="w-8 text-center">{item.quantity}</span>
+                              <span className="w-8 text-center text-black font-medium">{item.quantity}</span>
                               <Button size="sm" variant="ghost" onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)} disabled={item.quantity >= item.product.stock}><Plus className="w-4 h-4" /></Button>
                             </div>
                             <Button size="sm" variant="ghost" onClick={() => handleRemoveItem(item.id)} className="text-red-600"><Trash2 className="w-4 h-4" /></Button>
                           </div>
                           <div className="mt-3 pt-3 border-t flex justify-between">
-                            <span>Total:</span>
+                            <span className="text-black font-medium">Total:</span>
                             <span className="font-bold text-blue-600">{formatPrice(Number(item.product.price) * item.quantity)}</span>
                           </div>
                         </div>
@@ -277,51 +309,86 @@ export default function CartPage() {
             <div className="lg:col-span-1">
               <div className="sticky top-8 space-y-6">
                 <div className="bg-white rounded-2xl shadow-lg border border-slate-100">
-                  <div className="bg-blue-50 p-6 border-b"><h2 className="text-xl font-bold">Summary</h2></div>
+                  <div className="bg-blue-50 p-6 border-b"><h2 className="text-xl font-bold text-black">Summary</h2></div>
                   <div className="p-6 space-y-3">
-                    <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="font-bold">{formatPrice(subtotal)}</span></div>
-                    <div className="flex justify-between pb-3 border-b"><span className="text-gray-600">Shipping</span><span className="font-bold">{shippingFee === 0 ? 'FREE' : formatPrice(shippingFee)}</span></div>
+                    <div className="flex justify-between"><span className="text-black font-medium">Subtotal</span><span className="font-bold text-black">{formatPrice(subtotal)}</span></div>
+                    <div className="flex justify-between pb-3 border-b"><span className="text-black font-medium">Shipping</span><span className="font-bold text-black">{shippingFee === 0 ? 'FREE' : formatPrice(shippingFee)}</span></div>
                     {!appliedCoupon ? (
                       <div className="pt-2 border-t">
                         <div className="flex gap-2">
-                          <Input placeholder="Coupon code" value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
-                          <Button variant="outline" onClick={handleApplyCoupon} disabled={!couponCode.trim()}>Apply</Button>
+                          <Input 
+                            placeholder="Coupon code" 
+                            value={couponCode} 
+                            onChange={(e) => setCouponCode(e.target.value)}
+                            disabled={validateCouponMutation.isPending}
+                          />
+                          <Button 
+                            variant="outline" 
+                            onClick={handleApplyCoupon} 
+                            disabled={!couponCode.trim() || validateCouponMutation.isPending}
+                          >
+                            {validateCouponMutation.isPending ? 'Loading...' : 'Apply'}
+                          </Button>
                         </div>
                       </div>
                     ) : (
                       <div className="pt-2 border-t bg-green-50 p-2 rounded flex justify-between items-center">
                         <div className="flex items-center gap-2">
                           <Check className="w-5 h-5 text-green-600" />
-                          <span className="font-semibold text-green-900">{appliedCoupon.code}</span>
+                          <span className="font-semibold text-green-900">{appliedCoupon?.coupon?.code || appliedCoupon?.code || 'Kupon Digunakan'}</span>
                         </div>
                         <X className="w-4 h-4 cursor-pointer text-green-600" onClick={handleRemoveCoupon} />
                       </div>
                     )}
-                    {discount > 0 && <div className="flex justify-between text-green-600 font-semibold pt-2">Discount<span>-{formatPrice(discount)}</span></div>}
+                    {discount > 0 && <div className="flex justify-between text-green-600 font-semibold pt-2"><span>Diskon</span><span>-{formatPrice(discount)}</span></div>}
                   </div>
                   <div className="border-t bg-blue-50 p-6">
-                    <div className="flex justify-between mb-1"><span>Total</span><span className="text-2xl font-bold text-blue-600">{formatPrice(total)}</span></div>
+                    <div className="flex justify-between mb-1"><span className="text-black font-medium">Total</span><span className="text-2xl font-bold text-blue-600">{formatPrice(total)}</span></div>
                   </div>
                   <div className="p-6 border-t">
                     <Button className="w-full bg-blue-600 text-white" onClick={handleCheckout}>Proceed <ArrowRight className="w-5 h-5 ml-2" /></Button>
                   </div>
                 </div>
-
-                <div className="bg-white rounded-2xl shadow-lg p-6 border border-slate-100">
-                  <div className="flex gap-2 mb-3"><Truck className="w-5 h-5 text-blue-600" /><h3 className="font-bold">Shipping</h3></div>
-                  {addresses?.length > 0 ? (
-                    <div><p className="text-sm text-gray-600 mb-2">To:</p><p className="font-semibold bg-blue-50 p-2 rounded mb-2">{addresses.find((a: any) => a.isDefault)?.address || addresses[0].address}</p><Link href="/profile/addresses" className="text-blue-600 text-sm">Change</Link></div>
-                  ) : (
-                    <Link href="/profile/addresses"><Button variant="outline" className="w-full">Add Address</Button></Link>
-                  )}
-                </div>
-
-                <Link href="/products"><Button variant="outline" className="w-full">Continue Shopping</Button></Link>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation.isOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="max-w-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertCircle className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-black">Confirm Delete</h3>
+                </div>
+              </div>
+              <p className="text-gray-700 mb-6">Apakah Anda yakin ingin menghapus item ini dari keranjang?</p>
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setDeleteConfirmation({ isOpen: false, itemId: null })}
+                >
+                  Batal
+                </Button>
+                <Button 
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  onClick={confirmDelete}
+                  disabled={removeItemMutation.isPending}
+                >
+                  {removeItemMutation.isPending ? 'Menghapus...' : 'Hapus'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// HARDCODED untuk test - harus ke 3001 (backend port)
+// HARDCODED untuk test - backend port 3001
 const API_URL = 'http://localhost:3001';
 
 console.log('🔧 API_URL HARDCODED:', API_URL);

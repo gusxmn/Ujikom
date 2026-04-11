@@ -17,6 +17,10 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { WishlistModule } from './modules/wishlist/wishlist.module';
 import { CouponsModule } from './modules/coupons/coupons.module';
 import { ShippingAddressesModule } from './modules/shipping-addresses/shipping-addresses.module';
+import { ShippingModule } from './modules/shipping/shipping.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { WebsocketGateway } from './config/websocket.gateway';
 
 @Module({
   imports: [
@@ -44,9 +48,13 @@ import { ShippingAddressesModule } from './modules/shipping-addresses/shipping-a
     WishlistModule,
     CouponsModule,
     ShippingAddressesModule,
+    ShippingModule,
+    NotificationsModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [
+    WebsocketGateway,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

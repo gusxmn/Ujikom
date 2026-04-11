@@ -49,10 +49,13 @@ export class ReviewsController {
   @ApiQuery({ name: 'limit', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'Reviews retrieved successfully' })
   async findAll(
-    @Query('productId', ParseIntPipe) productId?: number,
-    @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('productId') productIdStr?: string,
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
   ) {
+    const productId = productIdStr ? parseInt(productIdStr, 10) : undefined;
+    const page = pageStr ? parseInt(pageStr, 10) : 1;
+    const limit = limitStr ? parseInt(limitStr, 10) : 10;
     return this.reviewsService.findAll(productId, page, limit);
   }
 
@@ -71,9 +74,11 @@ export class ReviewsController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getUserReviews(
     @Request() req,
-    @Query('page', ParseIntPipe) page: number = 1,
-    @Query('limit', ParseIntPipe) limit: number = 10,
+    @Query('page') pageStr?: string,
+    @Query('limit') limitStr?: string,
   ) {
+    const page = pageStr ? parseInt(pageStr, 10) : 1;
+    const limit = limitStr ? parseInt(limitStr, 10) : 10;
     return this.reviewsService.getUserReviews(req.user.sub, page, limit);
   }
 

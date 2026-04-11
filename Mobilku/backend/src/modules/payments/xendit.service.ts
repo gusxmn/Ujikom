@@ -1,61 +1,139 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Xendit, Invoice as XenditInvoice } from 'xendit-node';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma, PaymentStatus } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
+import { WebsocketGateway } from '../../config/websocket.gateway';
 
 @Injectable()
 export class XenditService {
   private xendit: Xendit;
+  private readonly logger = new Logger(XenditService.name);
+  private isProductionMode: boolean;
 
   constructor(
     private configService: ConfigService,
     private prisma: PrismaService,
+    private notificationsService: NotificationsService,
+    private websocketGateway: WebsocketGateway,
   ) {
     const secretKey = this.configService.get<string>('XENDIT_SECRET_KEY');
-    if (!secretKey) {
-      console.warn('⚠️ XENDIT_SECRET_KEY is not configured. Using test mode.');
+    this.isProductionMode = !!secretKey && secretKey !== 'xendit_test_key';
+    
+    if (!this.isProductionMode) {
+      this.logger.warn('⚠️ Running in DEVELOPMENT MODE - Using mock invoices');
     }
     
     this.xendit = new Xendit({
-      secretKey: secretKey || 'xendit_test_key',
+      secretKey: secretKey || 'xnd_development_test',
     });
+    
+    this.logger.log('✅ Xendit service initialized');
+  }
+
+  /**
+   * Create invoice and update payment with Xendit details
+   */
+  async createInvoiceForPayment(paymentId: number, orderId: number, amount: number, customerEmail: string, customerName: string) {
+    try {
+      console.log(`💳 [Xendit] Creating invoice for payment ${paymentId}, order ${orderId}, amount: ${amount}`);
+      
+      const invoice = await this.createInvoice(orderId, amount, customerEmail, customerName);
+      console.log(`✅ [Xendit] Invoice created:`, invoice.id);
+
+      // Update payment with Xendit details
+      const updatedPayment = await this.prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          xenditId: invoice.id,
+          xenditInvoiceUrl: invoice.invoiceUrl,
+          metadata: {
+            externalId: invoice.externalId,
+            createdAt: new Date(),
+            expiresAt: invoice.expiryDate || new Date(Date.now() + 24 * 60 * 60 * 1000),
+          },
+        },
+      });
+
+      // Send payment pending notification with invoice URL
+      await this.notificationsService.notifyPaymentPending(
+        (await this.prisma.order.findUnique({ where: { id: orderId } }))?.userId || 0,
+        orderId,
+        invoice.invoiceUrl,
+        new Date(invoice.expiryDate || Date.now() + 24 * 60 * 60 * 1000),
+      );
+
+      // Send payment invoice via WebSocket
+      this.websocketGateway.sendPaymentInvoice(
+        (await this.prisma.order.findUnique({ where: { id: orderId } }))?.userId || 0,
+        {
+          orderId,
+          invoiceUrl: invoice.invoiceUrl,
+          expiresAt: invoice.expiryDate || new Date(Date.now() + 24 * 60 * 60 * 1000),
+          amount,
+        },
+      );
+
+      return {
+        paymentId: updatedPayment.id,
+        xenditId: invoice.id,
+        invoiceUrl: invoice.invoiceUrl,
+        expiresAt: invoice.expiryDate,
+        amount,
+      };
+    } catch (error) {
+      this.logger.error('❌ Failed to create invoice:', error);
+      throw error;
+    }
   }
 
   async createInvoice(orderId: number, amount: number, customerEmail: string, customerName: string) {
     try {
-      // For development without real Xendit account
-      if (!this.configService.get<string>('XENDIT_SECRET_KEY') || 
-          this.configService.get<string>('XENDIT_SECRET_KEY') === 'xendit_test_key') {
+      this.logger.log(`📄 Creating invoice for order ${orderId}, amount: ${amount}`);
+
+      // Use mock invoice in development mode
+      if (!this.isProductionMode) {
+        this.logger.debug('📋 Using mock invoice for development');
         return this.createMockInvoice(orderId, amount, customerEmail);
       }
 
-      // Generate invoice
+      // Generate real invoice via Xendit API
+      this.logger.log('🌐 Creating Xendit invoice via API');
       const invoice: any = await (this.xendit as any).Invoice.createInvoice({
         data: {
           externalId: `order-${orderId}-${Date.now()}`,
-          amount,
+          amount: Math.round(amount), // Ensure amount is integer
           payerEmail: customerEmail,
           description: `Payment for Order #${orderId}`,
           currency: 'IDR',
           reminderTime: 1,
-          successRedirectUrl: `${this.configService.get('FRONTEND_URL')}/orders/success`,
-          failureRedirectUrl: `${this.configService.get('FRONTEND_URL')}/orders/failed`,
+          successRedirectUrl: `${this.configService.get('FRONTEND_URL')}/checkout/success?orderId=${orderId}`,
+          failureRedirectUrl: `${this.configService.get('FRONTEND_URL')}/checkout/failed?orderId=${orderId}`,
           customer: {
             email: customerEmail,
             givenNames: customerName,
           },
           customerNotificationPreference: {
-            invoicePaid: ['email', 'whatsapp'],
+            invoicePaid: ['email'],
           },
           invoiceDuration: 86400, // 24 hours
+          items: [
+            {
+              name: `Order #${orderId}`,
+              quantity: 1,
+              price: Math.round(amount),
+            },
+          ],
         },
       });
 
+      this.logger.log(`✅ Xendit invoice created successfully: ${invoice.id}`);
       return invoice;
     } catch (error) {
-      console.error('Xendit create invoice error:', error);
+      this.logger.error('❌ Failed to create Xendit invoice:', error);
       // Fallback to mock invoice for development
+      this.logger.warn('⚠️ Falling back to mock invoice');
       return this.createMockInvoice(orderId, amount, customerEmail);
     }
   }

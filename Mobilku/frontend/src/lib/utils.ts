@@ -7,6 +7,20 @@ export const formatPrice = (price: number): string => {
   }).format(price);
 };
 
+const BACKEND_URL = 'http://localhost:3001';
+
+// Build image URL with backend URL if needed
+export const buildImageUrl = (url: string): string => {
+  if (!url) return '/placeholder.png';
+  if (url.startsWith('http')) return url;
+  // Ensure uploads prefix is present
+  if (!url.startsWith('/uploads') && !url.startsWith('/images')) {
+    return `${BACKEND_URL}/uploads/${url}`;
+  }
+  if (url.startsWith('/')) return `${BACKEND_URL}${url}`;
+  return `${BACKEND_URL}/${url}`;
+};
+
 export const formatDate = (date: Date | string): string => {
   return new Date(date).toLocaleDateString('id-ID', {
     year: 'numeric',
@@ -42,9 +56,9 @@ export const parseProductImages = (images: any): string[] => {
   try {
     if (typeof images === 'string') {
       const parsed = JSON.parse(images);
-      return Array.isArray(parsed) ? parsed.map((img: any) => img.url || img) : [];
+      return Array.isArray(parsed) ? parsed.map((img: any) => buildImageUrl(img.url || img)) : [];
     } else if (Array.isArray(images)) {
-      return images.map((img: any) => typeof img === 'string' ? img : img.url);
+      return images.map((img: any) => buildImageUrl(typeof img === 'string' ? img : img.url));
     }
   } catch (e) {
     console.error('Failed to parse images:', e);

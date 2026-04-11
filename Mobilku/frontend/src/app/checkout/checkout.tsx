@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -27,7 +27,7 @@ import {
   AlertCircle,
   ChevronRight
 } from 'lucide-react';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, buildImageUrl } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
@@ -72,6 +72,18 @@ export default function CheckoutPage() {
     enabled: !!user,
   });
 
+  // Auto-select default address when addresses are loaded
+  useEffect(() => {
+    if (addresses?.length > 0 && !selectedAddressId) {
+      const defaultAddress = addresses.find((addr: any) => addr.isDefault);
+      if (defaultAddress) {
+        setSelectedAddressId(defaultAddress.id);
+      } else {
+        setSelectedAddressId(addresses[0].id);
+      }
+    }
+  }, [addresses, selectedAddressId]);
+
   // Fetch available shipping methods
   const { data: shippingMethods } = useQuery({
     queryKey: ['shipping-methods'],
@@ -81,6 +93,13 @@ export default function CheckoutPage() {
     },
     enabled: currentStep === 'shipping',
   });
+
+  // Auto-select first shipping method when methods are loaded
+  useEffect(() => {
+    if (shippingMethods?.length > 0 && !selectedShipping) {
+      setSelectedShipping(shippingMethods[0].id.toString());
+    }
+  }, [shippingMethods, selectedShipping]);
 
   // Create order mutation
   const createOrderMutation = useMutation({
@@ -93,7 +112,9 @@ export default function CheckoutPage() {
       router.push(`/orders/${data.order.id}/success`);
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to place order');
+      const errorMessage = error.response?.data?.message || 'Failed to place order';
+      console.error('❌ Order creation error:', error.response?.data);
+      toast.error(errorMessage);
     },
   });
 
@@ -129,7 +150,7 @@ export default function CheckoutPage() {
     total + (Number(item.product.price) * item.quantity), 0);
   
   const selectedShippingMethod = shippingMethods?.find(
-    (method: any) => method.id === selectedShipping
+    (method: any) => method.id.toString() === selectedShipping
   );
   const shippingFee = selectedShippingMethod?.cost || 0;
   const total = subtotal + shippingFee;
@@ -167,17 +188,54 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = () => {
-    if (!selectedPayment) {
+    // Validate all required fields
+    if (!selectedAddressId || selectedAddressId <= 0) {
+      toast.error('Please select a valid shipping address');
+      return;
+    }
+
+    if (!selectedShipping) {
+      toast.error('Please select a shipping method');
+      return;
+    }
+
+    if (!selectedPayment || selectedPayment.trim() === '') {
       toast.error('Please select a payment method');
       return;
     }
 
+    const addressId = Number(selectedAddressId);
+    if (!Number.isInteger(addressId) || addressId <= 0) {
+      toast.error('Invalid address ID');
+      return;
+    }
+
+    const shippingMethodId = parseInt(selectedShipping, 10);
+    if (!Number.isInteger(shippingMethodId) || shippingMethodId <= 0) {
+      toast.error('Invalid shipping method selected');
+      return;
+    }
+
+    const paymentMethod = String(selectedPayment).trim();
+    if (paymentMethod === '') {
+      toast.error('Payment method cannot be empty');
+      return;
+    }
+
     const orderData = {
-      addressId: selectedAddressId,
-      shippingMethodId: selectedShipping,
-      paymentMethod: selectedPayment,
+      addressId: addressId,
+      shippingMethodId: shippingMethodId,
+      paymentMethod: paymentMethod,
       notes: orderNotes,
     };
+
+    // Log order data for debugging
+    console.log('📦 Placing order with data:', orderData);
+    console.log('Data types:', {
+      addressId: typeof orderData.addressId,
+      shippingMethodId: typeof orderData.shippingMethodId,
+      paymentMethod: typeof orderData.paymentMethod,
+    });
 
     createOrderMutation.mutate(orderData);
   };
@@ -778,14 +836,14 @@ export default function CheckoutPage() {
                         {shippingMethods.map((method: any) => (
                           <div key={method.id} className="relative">
                             <RadioGroupItem
-                              value={method.id}
+                              value={method.id.toString()}
                               id={`shipping-${method.id}`}
                               className="sr-only"
                             />
                             <Label
                               htmlFor={`shipping-${method.id}`}
                               className={`flex cursor-pointer border rounded-lg p-4 hover:border-primary transition-colors ${
-                                selectedShipping === method.id
+                                selectedShipping === method.id.toString()
                                   ? 'border-primary bg-primary/5'
                                   : 'border-gray-300'
                               }`}
@@ -964,10 +1022,11 @@ export default function CheckoutPage() {
                                 const imageData = item.product.images;
                                 if (typeof imageData === 'string') {
                                   const parsed = JSON.parse(imageData);
-                                  imageUrl = Array.isArray(parsed) ? parsed[0]?.url || parsed[0] : null;
+                                  imageUrl = Array.isArray(parsed) ? (parsed[0]?.url || parsed[0]) : null;
                                 } else if (Array.isArray(imageData) && imageData.length > 0) {
                                   imageUrl = typeof imageData[0] === 'string' ? imageData[0] : imageData[0]?.url;
                                 }
+                                imageUrl = buildImageUrl(imageUrl);
                                 return imageUrl ? (
                                   <img
                                     src={imageUrl}

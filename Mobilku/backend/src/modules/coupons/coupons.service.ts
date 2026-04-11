@@ -167,35 +167,39 @@ export class CouponsService {
   }
 
   async validateCoupon(validateCouponDto: ValidateCouponDto) {
+    console.log('Validating coupon:', validateCouponDto);
+    
     const coupon = await this.prisma.coupon.findFirst({
       where: {
         code: validateCouponDto.code,
         isActive: true,
         startDate: { lte: new Date() },
         endDate: { gte: new Date() },
-        OR: [
-          { usageLimit: null },
-          { usageLimit: { gt: this.prisma.coupon.fields.usedCount } },
-        ],
       },
     });
 
     if (!coupon) {
-      throw new BadRequestException('Invalid or expired coupon');
+      throw new BadRequestException('Kode kupon tidak valid atau sudah kadaluarsa');
+    }
+
+    // Check usage limit
+    if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+      throw new BadRequestException('Kupon sudah mencapai batas penggunaan');
     }
 
     // Check minimum purchase
     if (coupon.minPurchase && validateCouponDto.totalAmount < coupon.minPurchase.toNumber()) {
-      throw new BadRequestException(`Minimum purchase of ${coupon.minPurchase} required`);
+      throw new BadRequestException(
+        `Minimum pembelian Rp ${coupon.minPurchase.toNumber().toLocaleString('id-ID')} diperlukan`,
+      );
     }
 
     // Calculate discount
-    let discount = 0;
     let discountAmount = 0;
 
-    if (coupon.discountType === DiscountType.PERCENTAGE) {
-      discount = coupon.value.toNumber();
-      discountAmount = (validateCouponDto.totalAmount * discount) / 100;
+    if (coupon.discountType === 'PERCENTAGE') {
+      const discountPercent = coupon.value.toNumber();
+      discountAmount = (validateCouponDto.totalAmount * discountPercent) / 100;
       
       if (coupon.maxDiscount && discountAmount > coupon.maxDiscount.toNumber()) {
         discountAmount = coupon.maxDiscount.toNumber();
@@ -211,8 +215,17 @@ export class CouponsService {
 
     const finalAmount = validateCouponDto.totalAmount - discountAmount;
 
+    console.log('Coupon validated:', {
+      code: coupon.code,
+      discountAmount,
+      finalAmount,
+    });
+
     return {
       isValid: true,
+      code: coupon.code,
+      discount: discountAmount,
+      finalAmount,
       coupon: {
         id: coupon.id,
         code: coupon.code,
@@ -221,9 +234,7 @@ export class CouponsService {
         minPurchase: coupon.minPurchase?.toNumber(),
         maxDiscount: coupon.maxDiscount?.toNumber(),
       },
-      discount: discountAmount,
-      finalAmount,
-      message: 'Coupon applied successfully',
+      message: 'Kupon berhasil digunakan',
     };
   }
 

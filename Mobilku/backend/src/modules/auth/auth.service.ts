@@ -228,7 +228,7 @@ export class AuthService {
       });
 
       return { message: 'Password reset successful' };
-    } catch (error) {
+    } catch (error: any) {
       if (error.name === 'TokenExpiredError') {
         throw new UnauthorizedException('Reset token has expired');
       }

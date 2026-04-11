@@ -40,7 +40,7 @@ export default function ProfilePage() {
     queryKey: ['user-orders'],
     queryFn: async () => {
       const response = await api.get('/orders');
-      return response.data;
+      return response.data?.data || [];
     },
     enabled: !!user,
   });

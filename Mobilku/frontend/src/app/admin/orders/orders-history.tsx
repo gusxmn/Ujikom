@@ -45,7 +45,7 @@ export default function OrdersPage() {
         params.append('status', activeTab);
       }
       const response = await api.get(`/orders?${params}`);
-      return response.data;
+      return response.data?.data || [];
     },
     enabled: !!user,
   });

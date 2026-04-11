@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -57,6 +57,7 @@ import Link from 'next/link';
 export default function AdminOrdersPage() {
   const router = useRouter();
   const { user, isLoading: authLoading } = useAuth();
+  const tableRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateRange, setDateRange] = useState('all');
@@ -65,6 +66,7 @@ export default function AdminOrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [updateStatusDialogOpen, setUpdateStatusDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Check if user is admin
   useEffect(() => {
@@ -75,31 +77,44 @@ export default function AdminOrdersPage() {
   }, [user, authLoading, router]);
 
   // Fetch orders
-  const { data: orders, isLoading, refetch } = useQuery({
-    queryKey: ['admin-orders', search, statusFilter, dateRange, sortField, sortDirection],
+  const { data: orders, isLoading, refetch } = useQuery<any[]>({
+    queryKey: ['admin-orders'],
     queryFn: async () => {
       try {
         const params = new URLSearchParams();
         params.append('page', '1');
-        params.append('limit', '50');
+        params.append('limit', '100');
         
+        console.log('📦 [Admin Orders] Fetching orders...');
         const response = await api.get(`/orders?${params}`);
+        console.log('📦 [Admin Orders] API Response:', response.data);
+        
         // Extract orders from paginated response
-        let filteredOrders = response.data?.data || response.data || [];
+        let filteredOrders = Array.isArray(response.data) ? response.data : (response.data?.data || response.data || []);
+        console.log('✅ [Admin Orders] Data extracted, count:', filteredOrders.length);
+        
+        if (!Array.isArray(filteredOrders)) {
+          console.warn('⚠️ [Admin Orders] Response is not an array, switching to empty array');
+          filteredOrders = [];
+        }
         
         // Apply search filter
-        if (search) {
+        if (search && search.trim()) {
           const searchLower = search.toLowerCase();
+          const beforeFilter = filteredOrders.length;
           filteredOrders = filteredOrders.filter((order: any) => 
             order.orderNumber?.toLowerCase().includes(searchLower) ||
             order.user?.name?.toLowerCase().includes(searchLower) ||
             order.user?.email?.toLowerCase().includes(searchLower)
           );
+          console.log(`🔍 [Search] Filtered: ${beforeFilter} → ${filteredOrders.length} orders`);
         }
         
         // Apply status filter
         if (statusFilter !== 'all') {
-          filteredOrders = filteredOrders.filter((order: any) => order.status === statusFilter.toUpperCase());
+          const beforeFilter = filteredOrders.length;
+          filteredOrders = filteredOrders.filter((order: any) => order.status === statusFilter.toLowerCase());
+          console.log(`🏷️ [Status Filter] ${statusFilter} : ${beforeFilter} → ${filteredOrders.length} orders`);
         }
         
         // Apply sorting
@@ -115,15 +130,38 @@ export default function AdminOrdersPage() {
           return 0;
         });
         
+        console.log('✅ [Admin Orders] Final orders ready:', filteredOrders);
         return filteredOrders;
       } catch (error) {
-        console.error('Failed to fetch orders:', error);
+        console.error('❌ [Admin Orders] Fetch failed:', error);
         toast.error('Failed to load orders');
         return [];
       }
     },
     enabled: !!user && user.role === 'ADMIN',
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
+    gcTime: 5 * 60 * 1000,
   });
+
+  // Force refetch when user role is confirmed as ADMIN
+  useEffect(() => {
+    if (!!user && user.role === 'ADMIN' && !isLoading) {
+      console.log('🔄 [Admin Orders] User verified as ADMIN, triggering initial fetch');
+      refetch();
+    }
+  }, [user]);
+
+  // Auto-scroll to top when orders data changes
+  useEffect(() => {
+    if (!isLoading && orders && orders.length > 0 && tableRef.current && isRefreshing) {
+      console.log('📍 [Scroll] Moving to top...');
+      tableRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setIsRefreshing(false);
+      toast.success('Data updated!' , { duration: 2000 });
+    }
+  }, [orders, isLoading]);
 
   // Update order status mutation
   const updateStatusMutation = useMutation({
@@ -265,11 +303,24 @@ export default function AdminOrdersPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
-            <p className="text-gray-600 mt-1">Manage customer orders and shipments</p>
+            <h1 className="text-3xl font-bold text-black">Orders</h1>
+            <p className="text-black mt-1">Manage customer orders and shipments</p>
           </div>
           
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={() => {
+                console.log('🔄 [Refresh] Manual refresh triggered');
+                setIsRefreshing(true);
+                refetch();
+              }}
+              disabled={isLoading || isRefreshing}
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             <Button
               variant="outline"
               className="gap-2"
@@ -288,12 +339,12 @@ export default function AdminOrdersPage() {
               {/* Search */}
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-600" />
                   <Input
                     placeholder="Search by order ID, customer name, or email..."
                     value={search}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 text-black placeholder:text-black"
                   />
                 </div>
               </div>
@@ -303,11 +354,11 @@ export default function AdminOrdersPage() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="px-3 py-2 border rounded-lg bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="all">All Status</option>
+                  <option value="all" className="text-black">All Status</option>
                   {statusOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
+                    <option key={option.value} value={option.value} className="text-black">
                       {option.label}
                     </option>
                   ))}
@@ -316,14 +367,14 @@ export default function AdminOrdersPage() {
                 <select
                   value={dateRange}
                   onChange={(e) => setDateRange(e.target.value)}
-                  className="px-3 py-2 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="px-3 py-2 border rounded-lg bg-white text-black text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  <option value="all">All Time</option>
-                  <option value="today">Today</option>
-                  <option value="week">This Week</option>
-                  <option value="month">This Month</option>
-                  <option value="quarter">This Quarter</option>
-                  <option value="year">This Year</option>
+                  <option value="all" className="text-black">All Time</option>
+                  <option value="today" className="text-black">Today</option>
+                  <option value="week" className="text-black">This Week</option>
+                  <option value="month" className="text-black">This Month</option>
+                  <option value="quarter" className="text-black">This Quarter</option>
+                  <option value="year" className="text-black">This Year</option>
                 </select>
 
                 <Button
@@ -332,10 +383,14 @@ export default function AdminOrdersPage() {
                     setSearch('');
                     setStatusFilter('all');
                     setDateRange('all');
+                    console.log('🔄 [Reset] Clearing filters and refetching...');
+                    setIsRefreshing(true);
+                    refetch();
                   }}
                   className="gap-2"
+                  disabled={isLoading || isRefreshing}
                 >
-                  <RefreshCw className="w-4 h-4" />
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                   Reset
                 </Button>
               </div>
@@ -344,17 +399,24 @@ export default function AdminOrdersPage() {
         </Card>
 
         {/* Orders Table */}
-        <Card>
-          <CardContent className="p-0">
+        <div ref={tableRef}>
+          <Card>
+            <CardContent className="p-0">
             {isLoading ? (
               <div className="p-8">
-                <div className="animate-pulse space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-12 bg-gray-200 rounded"></div>
-                  ))}
+                <div className="flex flex-col items-center justify-center space-y-4">
+                  <div className="animate-spin">
+                    <RefreshCw className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="text-gray-600 font-medium">Loading orders...</p>
+                  <div className="animate-pulse space-y-3 w-full">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="h-12 bg-gray-200 rounded"></div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            ) : orders?.length > 0 ? (
+            ) : (orders && orders.length > 0) ? (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -414,15 +476,15 @@ export default function AdminOrdersPage() {
                         <TableCell>
                           <div>
                             <p className="font-medium text-primary">#{order.orderNumber}</p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-black">
                               {formatDate(order.createdAt)}
                             </p>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{order.user?.name || 'Guest'}</p>
-                            <p className="text-sm text-gray-600">{order.user?.email}</p>
+                            <p className="font-medium text-black">{order.user?.name || 'Guest'}</p>
+                            <p className="text-sm text-black">{order.user?.email}</p>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -456,8 +518,8 @@ export default function AdminOrdersPage() {
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-bold">{formatPrice(Number(order.totalAmount))}</p>
-                            <p className="text-xs text-gray-500">
+                            <p className="font-bold text-black">{formatPrice(Number(order.totalAmount))}</p>
+                            <p className="text-xs text-black">
                               {order.items.length} item(s)
                             </p>
                           </div>
@@ -534,17 +596,18 @@ export default function AdminOrdersPage() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-black mb-2">
                   No orders found
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-black">
                   {search ? 'Try adjusting your search or filters' : 'No orders have been placed yet'}
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
+        </div>
 
         {/* Update Status Dialog */}
         <Dialog open={updateStatusDialogOpen} onOpenChange={setUpdateStatusDialogOpen}>
@@ -558,7 +621,7 @@ export default function AdminOrdersPage() {
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-black">
                   Current Status
                 </label>
                 <div className="p-3 bg-gray-50 rounded-lg">
@@ -570,7 +633,7 @@ export default function AdminOrdersPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-black">
                   New Status
                 </label>
                 <select
@@ -579,7 +642,7 @@ export default function AdminOrdersPage() {
                   className="w-full px-3 py-2 border rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   {statusOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
+                    <option key={option.value} value={option.value} className="text-black">
                       {option.label}
                     </option>
                   ))}

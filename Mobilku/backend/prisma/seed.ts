@@ -225,6 +225,45 @@ for (const coupon of coupons) {
     console.log(`✅ Category created: ${category.name}`);
   }
 
+  // Create shipping methods
+  const shippingMethods = [
+    {
+      name: 'Standard Shipping',
+      description: 'Pengiriman standar 3-5 hari kerja',
+      cost: 25000,
+      estimatedDays: 5,
+      isActive: true,
+    },
+    {
+      name: 'Express Shipping',
+      description: 'Pengiriman ekspres 1-2 hari kerja',
+      cost: 50000,
+      estimatedDays: 2,
+      isActive: true,
+    },
+    {
+      name: 'Same Day Delivery',
+      description: 'Pengiriman hari yang sama',
+      cost: 100000,
+      estimatedDays: 1,
+      isActive: true,
+    },
+    {
+      name: 'Free Shipping',
+      description: 'Gratis ongkos kirim untuk pembelian minimal Rp 1.000.000',
+      cost: 0,
+      estimatedDays: 7,
+      isActive: true,
+    },
+  ];
+
+  for (const method of shippingMethods) {
+    await prisma.shippingMethod.create({
+      data: method,
+    });
+    console.log(`✅ Shipping method created: ${method.name}`);
+  }
+
   // Create sample products
   const products = [
     {
@@ -546,8 +585,7 @@ for (const coupon of coupons) {
   console.log('\n� Database Summary:');
   console.log('======================');
   console.log('🚗 Products: 8 mobil dengan rating & reviews');
-  console.log('🏷️  Categories: 7 kategori');
-  console.log('👥 Customers: 14 test customers');
+  console.log('🏷️  Categories: 7 kategori');  console.log('🚚 Shipping Methods: 4 metode pengiriman');  console.log('👥 Customers: 14 test customers');
   console.log('📦 Orders: 35 orders across different time periods');
   console.log('⭐ Reviews: Multiple reviews per product with ratings');
 }
