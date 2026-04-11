@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import ProtectedRoute from '@/lib/components/ProtectedRoute';
 import { api } from '@/lib/api';
@@ -78,11 +79,12 @@ const STATUS_CONFIG: Record<string, {
 
 export default function OrderHistoryPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [search, setSearch] = useState('');
 
   // Fetch orders
-  const { data: orders, isLoading } = useQuery({
+  const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ['user-orders', selectedStatus, search],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -129,11 +131,26 @@ export default function OrderHistoryPage() {
   };
 
   const handleCancelOrder = async (orderId: string) => {
+    const confirmed = window.confirm(
+      'Are you sure you want to cancel this order? This action cannot be undone.'
+    );
+    if (!confirmed) return;
+
     try {
       await api.post(`/orders/${orderId}/cancel`);
       toast.success('Order cancelled');
-    } catch (error) {
-      toast.error('Failed to cancel order');
+      refetch();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Failed to cancel order';
+      toast.error(errorMessage);
+    }
+  };
+
+  const handleTrackPackage = (trackingNumber: string) => {
+    if (trackingNumber) {
+      router.push(`/track-package?tracking=${encodeURIComponent(trackingNumber)}`);
+    } else {
+      toast.error('Tracking number not available');
     }
   };
 
@@ -384,6 +401,7 @@ export default function OrderHistoryPage() {
                               variant="outline"
                               size="sm"
                               className="gap-2 text-xs text-purple-600 hover:bg-purple-50 border-purple-200"
+                              onClick={() => handleTrackPackage(order.trackingNumber || order.id)}
                             >
                               <Truck size={14} /> Track Package
                             </Button>

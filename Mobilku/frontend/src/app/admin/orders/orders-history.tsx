@@ -10,6 +10,14 @@ import { Input } from '@/lib/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/lib/components/ui/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/lib/components/ui/Tabs';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/lib/components/ui/Dialog';
+import {
   Search,
   Filter,
   Download,
@@ -35,6 +43,8 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [activeTab, setActiveTab] = useState('all');
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
 
   // Fetch orders
   const { data: orders, isLoading, refetch } = useQuery({
@@ -63,9 +73,15 @@ export default function OrdersPage() {
   });
 
   const handleCancelOrder = (orderId: number) => {
-    if (confirm('Are you sure you want to cancel this order? This action cannot be undone.')) {
-      cancelOrderMutation.mutate(orderId);
+    setSelectedOrderId(orderId);
+    setOpenConfirmDialog(true);
+  };
+
+  const confirmCancelOrder = () => {
+    if (selectedOrderId) {
+      cancelOrderMutation.mutate(selectedOrderId);
     }
+    setOpenConfirmDialog(false);
   };
 
   const handleReorder = (orderId: number) => {
@@ -405,6 +421,33 @@ export default function OrdersPage() {
           </Card>
         )}
       </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={openConfirmDialog} onOpenChange={setOpenConfirmDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Order?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to cancel this order? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpenConfirmDialog(false)}
+            >
+              No, Keep It
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmCancelOrder}
+              disabled={cancelOrderMutation.isPending}
+            >
+              {cancelOrderMutation.isPending ? 'Cancelling...' : 'Yes, Cancel Order'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

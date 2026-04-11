@@ -15,9 +15,9 @@ export default function LoginPage() {
       <div className="w-full max-w-4xl">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome Back</h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome</h1>
           <p className="text-lg text-gray-600">
-            Choose your login type to continue
+            Login To continue
           </p>
         </div>
 

@@ -20,6 +20,7 @@ import { ShippingAddressesModule } from './modules/shipping-addresses/shipping-a
 import { ShippingModule } from './modules/shipping/shipping.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
+import { PackageTrackingModule } from './modules/package-tracking/package-tracking.module';
 import { WebsocketGateway } from './config/websocket.gateway';
 
 @Module({
@@ -51,6 +52,7 @@ import { WebsocketGateway } from './config/websocket.gateway';
     ShippingModule,
     NotificationsModule,
     WebhooksModule,
+    PackageTrackingModule,
   ],
   controllers: [AppController],
   providers: [

@@ -168,8 +168,9 @@ export default function OrderDetailPage() {
       await api.post(`/orders/${orderId}/cancel`);
       toast.success('✅ Pesanan berhasil dibatalkan');
       window.location.reload();
-    } catch (error) {
-      toast.error('❌ Gagal membatalkan pesanan');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Gagal membatalkan pesanan';
+      toast.error(`❌ ${errorMessage}`);
     }
   };
 

@@ -1,4 +1,4 @@
-import { PrismaClient, Role, Transmission, FuelType, DiscountType } from '@prisma/client';
+import { PrismaClient, Role, Transmission, FuelType, DiscountType, PackageTrackingStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import 'dotenv/config';
 
@@ -509,6 +509,97 @@ for (const coupon of coupons) {
     console.log(`\n✅ Total ${orderIndex} orders created with proper time distribution!`);
   }
 
+  // Create package tracking for shipped and delivered orders
+  const shippedOrDeliveredOrders = await prisma.order.findMany({
+    where: {
+      status: {
+        in: ['SHIPPED', 'DELIVERED'],
+      },
+    },
+  });
+
+  const carriers = ['JNE', 'Pos Indonesia', 'TIKI', 'Ninja Express', 'SiCepat'];
+  const locations = [
+    'Jakarta Warehouse',
+    'Tangerang Hub',
+    'Bandung Center',
+    'Surabaya Terminal',
+    'Medan Office',
+    'Bekasi Distribution',
+    'Depok Sorting Center',
+  ];
+
+  for (let i = 0; i < shippedOrDeliveredOrders.length; i++) {
+    const order = shippedOrDeliveredOrders[i];
+    const carrier = carriers[Math.floor(Math.random() * carriers.length)];
+    const trackingNumber = `TRK${Date.now()}${i}`.slice(0, 20);
+    const estimatedDelivery = new Date(order.createdAt);
+    estimatedDelivery.setDate(estimatedDelivery.getDate() + Math.floor(Math.random() * 5) + 3);
+
+    try {
+      const tracking = await prisma.packageTracking.create({
+        data: {
+          trackingNumber,
+          orderId: order.id,
+          status: order.status === 'DELIVERED' ? 'DELIVERED' : 'OUT_FOR_DELIVERY',
+          carrier,
+          shippingAddress: order.shippingAddress || { address: 'Jl. Default' },
+          estimatedDelivery,
+          actualDelivery: order.status === 'DELIVERED' ? new Date() : undefined,
+          currentLocation: locations[Math.floor(Math.random() * locations.length)],
+          trackingHistory: {
+            create: [
+              {
+                status: 'PENDING',
+                location: 'Warehouse Jakarta',
+                description: 'Paket sedang diproses',
+                timestamp: order.createdAt,
+              },
+              {
+                status: 'IN_WAREHOUSE',
+                location: 'Jakarta Hub',
+                description: 'Paket di warehouse',
+                timestamp: new Date(order.createdAt.getTime() + 2 * 60 * 60 * 1000),
+              },
+              {
+                status: 'SHIPPED',
+                location: `${carrier} Distribution Center`,
+                description: 'Paket telah dikirim',
+                timestamp: new Date(order.createdAt.getTime() + 4 * 60 * 60 * 1000),
+              },
+              {
+                status: 'IN_TRANSIT',
+                location: locations[Math.floor(Math.random() * locations.length)],
+                description: 'Paket dalam perjalanan',
+                timestamp: new Date(order.createdAt.getTime() + 24 * 60 * 60 * 1000),
+              },
+              {
+                status: 'OUT_FOR_DELIVERY',
+                location: 'Delivery Station',
+                description: 'Paket siap diantar hari ini',
+                timestamp: new Date(order.createdAt.getTime() + 48 * 60 * 60 * 1000),
+              },
+              ...(order.status === 'DELIVERED'
+                ? [
+                    {
+                      status: 'DELIVERED' as const,
+                      location: 'Tujuan',
+                      description: 'Paket telah diterima',
+                      timestamp: new Date(order.createdAt.getTime() + 72 * 60 * 60 * 1000),
+                    },
+                  ]
+                : []),
+            ],
+          },
+        },
+      });
+    } catch (e) {
+      console.error(`Error creating tracking for order ${order.id}:`, e);
+    }
+  }
+
+  console.log(`✅ Package tracking created for ${shippedOrDeliveredOrders.length} orders`);
+
   // Create reviews for all products
   // Fetch all products and customers for reviews (if not already fetched)
   let reviewProducts = await prisma.product.findMany();
@@ -582,12 +673,18 @@ for (const coupon of coupons) {
   console.log('\n👤 Customer:');
   console.log('  Email: customer@example.com');
   console.log('  Password: Customer123!');
-  console.log('\n� Database Summary:');
+  console.log('\n📊 Database Summary:');
   console.log('======================');
   console.log('🚗 Products: 8 mobil dengan rating & reviews');
-  console.log('🏷️  Categories: 7 kategori');  console.log('🚚 Shipping Methods: 4 metode pengiriman');  console.log('👥 Customers: 14 test customers');
+  console.log('🏷️  Categories: 7 kategori');
+  console.log('🚚 Shipping Methods: 4 metode pengiriman');
+  console.log('👥 Customers: 14 test customers');
   console.log('📦 Orders: 35 orders across different time periods');
   console.log('⭐ Reviews: Multiple reviews per product with ratings');
+  console.log('📍 Package Tracking: Created for all shipped/delivered orders');
+  console.log('\n✨ Try these demo credentials:');
+  console.log('  Admin: admin@example.com / Admin123!');
+  console.log('  Customer: customer@example.com / Customer123!');
 }
 
 main()

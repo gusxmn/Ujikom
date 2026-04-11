@@ -86,26 +86,27 @@ model ShippingMethod {
 }
 
 model Order {
-  id              Int         @id @default(autoincrement())
-  orderNumber     String      @unique
+  id              Int                @id @default(autoincrement())
+  orderNumber     String             @unique
   userId          Int
-  totalAmount     Decimal     @db.Decimal(15, 2)
-  status          OrderStatus @default(PENDING)
+  totalAmount     Decimal            @db.Decimal(15, 2)
+  status          OrderStatus        @default(PENDING)
   notes           String?
   shippingAddress Json
   shippingMethod  String?
-  shippingCost    Decimal     @default(0.00) @db.Decimal(15, 2)
+  shippingCost    Decimal            @default(0.00) @db.Decimal(15, 2)
   paymentMethod   String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
   couponId        Int?
   couponCode      String?
-  discount        Decimal     @default(0.00) @db.Decimal(15, 2)
-  subtotal        Decimal     @default(0.00) @db.Decimal(15, 2)
+  discount        Decimal            @default(0.00) @db.Decimal(15, 2)
+  subtotal        Decimal            @default(0.00) @db.Decimal(15, 2)
   items           OrderItem[]
-  coupon          Coupon?     @relation(fields: [couponId], references: [id])
-  user            User        @relation(fields: [userId], references: [id])
+  coupon          Coupon?            @relation(fields: [couponId], references: [id])
+  user            User               @relation(fields: [userId], references: [id])
   payments        Payment[]
+  packageTracking PackageTracking?
 
   @@index([couponId], map: "orders_couponId_fkey")
   @@index([userId], map: "orders_userId_fkey")
@@ -248,6 +249,40 @@ model ShippingAddress {
   @@map("shipping_addresses")
 }
 
+model PackageTracking {
+  id                    Int                       @id @default(autoincrement())
+  trackingNumber        String                    @unique
+  orderId               Int                       @unique
+  status                PackageTrackingStatus    @default(PENDING)
+  carrier               String                   // JNE, Pos Indonesia, dll
+  shippingAddress       Json
+  estimatedDelivery     DateTime?
+  actualDelivery        DateTime?
+  currentLocation       String?
+  metadata              Json?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  order                 Order                    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  trackingHistory       PackageTrackingHistory[]
+
+  @@index([orderId], map: "package_tracking_orderId_fkey")
+  @@map("package_tracking")
+}
+
+model PackageTrackingHistory {
+  id          Int      @id @default(autoincrement())
+  trackingId  Int
+  status      PackageTrackingStatus
+  location    String
+  description String
+  timestamp   DateTime @default(now())
+  createdAt   DateTime @default(now())
+  tracking    PackageTracking @relation(fields: [trackingId], references: [id], onDelete: Cascade)
+
+  @@index([trackingId], map: "package_tracking_history_trackingId_fkey")
+  @@map("package_tracking_history")
+}
+
 enum Role {
   ADMIN
   CUSTOMER
@@ -292,6 +327,17 @@ enum DiscountType {
   PERCENTAGE
   FIXED_AMOUNT
 }
+
+enum PackageTrackingStatus {
+  PENDING
+  IN_WAREHOUSE
+  SHIPPED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  FAILED
+}
+
 enum NotificationType {
   order_created
   order_shipped

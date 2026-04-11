@@ -419,9 +419,12 @@ export class OrdersService {
       throw new ForbiddenException('You do not have permission to cancel this order');
     }
 
+    const orderStatus = String(order.status).toUpperCase();
     const cancelStatuses = ['PENDING', 'PROCESSING'];
-    if (!cancelStatuses.includes(order.status)) {
-      throw new BadRequestException('Order cannot be cancelled in this status');
+    if (!cancelStatuses.includes(orderStatus)) {
+      throw new BadRequestException(
+        `Order cannot be cancelled. Current status: ${orderStatus}. Allowed statuses: ${cancelStatuses.join(', ')}`
+      );
     }
 
     const cancelled = await this.prisma.order.update({

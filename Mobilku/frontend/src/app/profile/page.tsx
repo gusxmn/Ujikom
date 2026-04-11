@@ -17,14 +17,20 @@ export default function ProfilePage() {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    phone: user?.phone || '',
+    name: '',
+    email: '',
+    phone: '',
   });
 
   useEffect(() => {
     if (!user) {
       router.push('/login');
+    } else {
+      setFormData({
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
+      });
     }
   }, [user, router]);
 
@@ -41,6 +47,11 @@ export default function ProfilePage() {
 
   return (
     <ProtectedRoute>
+      {!user ? (
+        <div className="min-h-screen flex items-center justify-center">
+          <p className="text-gray-500">Memuat...</p>
+        </div>
+      ) : (
       <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
@@ -118,7 +129,7 @@ export default function ProfilePage() {
                       <User className="w-5 h-5 text-gray-400" />
                       <div>
                         <p className="text-sm text-gray-600">Nama</p>
-                        <p className="font-semibold text-gray-900">{user!.name}</p>
+                        <p className="font-semibold text-gray-900">{user?.name || '-'}</p>
                       </div>
                     </div>
 
@@ -126,7 +137,7 @@ export default function ProfilePage() {
                       <Mail className="w-5 h-5 text-gray-400" />
                       <div>
                         <p className="text-sm text-gray-600">Email</p>
-                        <p className="font-semibold text-gray-900">{user!.email}</p>
+                        <p className="font-semibold text-gray-900">{user?.email || '-'}</p>
                       </div>
                     </div>
 
@@ -134,7 +145,7 @@ export default function ProfilePage() {
                       <Phone className="w-5 h-5 text-gray-400" />
                       <div>
                         <p className="text-sm text-gray-600">Nomor Telepon</p>
-                        <p className="font-semibold text-gray-900">{user!.phone || 'Belum diatur'}</p>
+                        <p className="font-semibold text-gray-900">{user?.phone || 'Belum diatur'}</p>
                       </div>
                     </div>
                   </>
@@ -212,6 +223,7 @@ export default function ProfilePage() {
         </Tabs>
       </div>
       </div>
+      )}
     </ProtectedRoute>
   );
 }
